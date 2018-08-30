@@ -25,12 +25,10 @@
   (reset! server (nserver/start-server :port (get-available-port))))
 
 
-
 (comment
   (start-server)
 
   (with-open [conn (repl/connect :port (get-server-port))]
     (-> (repl/client conn 1000)
         (repl/message {:op :eval :code "(map inc [1 2 3]) 4 (defn aa\n  []\n  ) (1 2)"})
-        clojure.pprint/pprint))
-  )
+        clojure.pprint/pprint)))
