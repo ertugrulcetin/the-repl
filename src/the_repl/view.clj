@@ -15,7 +15,8 @@
 
 (defn- create-editor
   []
-  (let [editor (text :multi-line? true
+  (let [editor (text :id :editor-text-area
+                     :multi-line? true
                      :font (seesaw.font/font :name :monospaced :size 11)
                      :wrap-lines? true)
         _      (.setTabSize editor 4)]
@@ -40,6 +41,7 @@
   [button-size]
   [(button :id :open-file-button
            :size button-size
+           :tip "Open a File"
            :icon (icon/icon (io/resource "open-file.png"))) :separator
    (button :id :save-button
            :size button-size
