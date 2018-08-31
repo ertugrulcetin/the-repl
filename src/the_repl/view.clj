@@ -37,21 +37,26 @@
                     :divider-location 5/8))
 
 
+(defn- get-icon
+  [path]
+  (icon/icon (io/resource path)))
+
+
 (defn- create-toolbars-editor-options
   [button-size]
   [(button :id :open-file-button
            :size button-size
            :tip "Open a File"
-           :icon (icon/icon (io/resource "open-file.png"))) :separator
-   (button :id :save-button
+           :icon (get-icon "open-file.png")) :separator
+   (button :id :save-file-button
            :size button-size
-           :icon (icon/icon (io/resource "save-to-file.png"))) :separator
+           :icon (get-icon "save-to-file.png")) :separator
    (button :id :clear-button
            :size button-size
-           :icon (icon/icon (io/resource "clear.png"))) :separator
+           :icon (get-icon "clear.png")) :separator
    (button :id :config-button
            :size button-size
-           :icon (icon/icon (io/resource "config.png")))])
+           :icon (get-icon "config.png"))])
 
 
 (defn- create-toolbars-repl-options
@@ -59,15 +64,15 @@
   (.add toolbar* (Box/createHorizontalGlue))
   (.add toolbar* (button :id :repl-run-button
                          :size button-size
-                         :icon (icon/icon (io/resource "run.png"))))
+                         :icon (get-icon "run.png")))
   (.addSeparator toolbar*)
   (.add toolbar* (button :id :repl-clear-button
                          :size button-size
-                         :icon (icon/icon (io/resource "clean.png"))))
+                         :icon (get-icon "clean.png")))
   (.addSeparator toolbar*)
   (.add toolbar* (button :id :repl-stop-button
                          :size button-size
-                         :icon (icon/icon (io/resource "stop.png")))))
+                         :icon (get-icon "stop.png"))))
 
 
 ;;TODO add tooltip to ertu's seesaw
@@ -91,8 +96,10 @@
 
 
 (comment
+  (ns-publics *ns*)
+  (meta #'seesaw.rsyntax/text-area)
   (dev/show-options (text))
-  (dev/show-events (frame))
+  (dev/show-events (seesaw.rsyntax/text-area))
   (select @main-frame [:#repl-stop-button]))
 
 
