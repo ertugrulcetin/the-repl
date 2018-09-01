@@ -19,15 +19,20 @@
                      :multi-line? true
                      :font (seesaw.font/font :name :monospaced :size 11)
                      :wrap-lines? true)
-        _      (.setTabSize editor 4)]
+        _      (.setTabSize editor 4)
+        _      (.setMargin editor (Insets. 5 5 5 5))]
     editor))
 
 
 (defn- create-repl
   []
-  (text :multi-line? true
-        :font (seesaw.font/font :name :monospaced :size 11)
-        :editable? false))
+  (let [repl (text :id :repl-text-area
+                   :multi-line? true
+                   :font (seesaw.font/font :name :monospaced :size 11)
+                   :editable? false)
+        _    (.setTabSize repl 4)
+        _    (.setMargin repl (Insets. 5 5 5 5))]
+    repl))
 
 
 (defn- create-splitpane-between-editor-repl
@@ -56,15 +61,18 @@
            :icon (get-icon "clear.png")) :separator
    (button :id :config-button
            :size button-size
-           :icon (get-icon "config.png"))])
+           :icon (get-icon "config.png")) :separator
+   (button :id :run-code-button
+           :size button-size
+           :icon (get-icon "run.png"))])
 
 
 (defn- create-toolbars-repl-options
   [toolbar* button-size]
   (.add toolbar* (Box/createHorizontalGlue))
-  (.add toolbar* (button :id :repl-run-button
+  (.add toolbar* (button :id :repl-start-button
                          :size button-size
-                         :icon (get-icon "run.png")))
+                         :icon (get-icon "power.png")))
   (.addSeparator toolbar*)
   (.add toolbar* (button :id :repl-clear-button
                          :size button-size
@@ -75,7 +83,6 @@
                          :icon (get-icon "stop.png"))))
 
 
-;;TODO add tooltip to ertu's seesaw
 (defn- create-options-toolbar
   []
   (let [button-size [50 :by 50]
@@ -106,9 +113,7 @@
 (defn- set-app-name!
   []
   (try
-    (System/setProperty "apple.laf.useScreenMenuBar" "true")
     (System/setProperty "com.apple.mrj.application.apple.menu.about.name" @title)
-    (UIManager/setLookAndFeel (UIManager/getSystemLookAndFeelClassName))
     (catch Exception _
       (println "There has been a problem when setting App Name."))))
 

@@ -9,4 +9,5 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [nrepl "0.4.4"]
                  [seesaw "1.5.0"]
+                 [kezban "0.1.81"]
                  [com.cemerick/pomegranate "1.0.0"]])

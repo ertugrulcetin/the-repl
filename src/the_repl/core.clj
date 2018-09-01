@@ -1,7 +1,8 @@
 (ns the-repl.core
   (:require [nrepl.server :as nserver]
             [nrepl.core :as repl])
-  (:import (java.net ServerSocket)))
+  (:import (java.net ServerSocket)
+           (java.io StringWriter)))
 
 
 (def server (atom nil))
@@ -25,10 +26,23 @@
   (reset! server (nserver/start-server :port (get-available-port))))
 
 
+(defn stop-server
+  []
+  (nserver/stop-server server)
+  (reset! server nil))
+
+
+(defn eval-code
+  [code]
+  (let [s# (StringWriter.)]
+    (binding [*out* s#]
+      (with-open [conn (repl/connect :port (get-server-port))]
+        (-> (repl/client conn 1000)
+            (repl/message {:op :eval :code code})
+            clojure.pprint/pprint))
+      (read-string (str s#)))))
+
+
 (comment
   (start-server)
-
-  (with-open [conn (repl/connect :port (get-server-port))]
-    (-> (repl/client conn 1000)
-        (repl/message {:op :eval :code "(map inc [1 2 3]) 4 (defn aa\n  []\n  ) (1 2)"})
-        clojure.pprint/pprint)))
+  (eval-code "(println \"aa\")"))
