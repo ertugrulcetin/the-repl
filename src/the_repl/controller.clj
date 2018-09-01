@@ -35,7 +35,8 @@
                 (append-to-repl (str ex "\n"))
 
                 err
-                (append-to-repl (str err "\n\n"))))))
+                (append-to-repl (str err "\n\n"))))
+    (scroll! (util/get-widget-by-id :repl-text-area) :to :bottom)))
 
 
 (defn- add-open-file-event

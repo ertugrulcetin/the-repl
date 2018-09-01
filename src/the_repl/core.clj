@@ -37,7 +37,7 @@
   (let [s# (StringWriter.)]
     (binding [*out* s#]
       (with-open [conn (repl/connect :port (get-server-port))]
-        (-> (repl/client conn 1000)
+        (-> (repl/client conn Integer/MAX_VALUE)
             (repl/message {:op :eval :code code})
             clojure.pprint/pprint))
       (read-string (str s#)))))
