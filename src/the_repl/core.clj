@@ -16,7 +16,7 @@
     port))
 
 
-(defn- get-server-port
+(defn get-server-port
   []
   (:port @server))
 
@@ -28,7 +28,7 @@
 
 (defn stop-server
   []
-  (nserver/stop-server server)
+  (nserver/stop-server @server)
   (reset! server nil))
 
 

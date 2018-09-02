@@ -52,7 +52,7 @@
   []
   (listen (util/get-widget-by-id :clear-button)
           :mouse-clicked (fn [_]
-                           (text! (util/get-widget-by-id :editor-taext-area)
+                           (text! (util/get-widget-by-id :editor-text-area)
                                   "(ns the-repl)\n\n")
                            (.requestFocus (util/get-widget-by-id :editor-text-area)))))
 
@@ -76,11 +76,42 @@
                            (run-code-in-repl (value (util/get-widget-by-id :editor-text-area))))))
 
 
+(defn- add-start-repl-event
+  []
+  (listen (util/get-widget-by-id :repl-start-button)
+          :mouse-clicked (fn [_]
+                           (append-to-repl "\nConnecting to local nREPL server...\n")
+                           (core/start-server)
+                           (append-to-repl (format "nREPL server started on port %d on host 127.0.0.1 - nrepl://127.0.0.1:%d\n"
+                                                   (core/get-server-port)
+                                                   (core/get-server-port))))))
+
+
+(defn- add-clean-repl-editor-event
+  []
+  (listen (util/get-widget-by-id :repl-clear-button)
+          :mouse-clicked (fn [_]
+                           (text! (util/get-widget-by-id :repl-text-area) ""))))
+
+
+(defn- add-stop-repl-event
+  []
+  (listen (util/get-widget-by-id :repl-stop-button)
+          :mouse-clicked (fn [_]
+                           (core/stop-server)
+                           (append-to-repl "REPL Stopped."))))
+
+
 (defn register-editor-events
   []
   (add-open-file-event)
+  (add-save-file-event)
   (add-clean-editor-event)
-  (add-save-file-event))
+  (add-run-code-event)
+  (add-start-repl-event)
+  (add-clean-repl-editor-event)
+  (add-stop-repl-event))
 
 (comment
-  (add-run-code-event))
+  (register-editor-events))
+
