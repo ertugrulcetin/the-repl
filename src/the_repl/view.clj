@@ -1,11 +1,15 @@
 (ns the-repl.view
   (:require [seesaw.core :refer :all]
+            [seesaw.options :refer [apply-options]]
             [seesaw.dev :as dev]
             [seesaw.icon :as icon]
             [clojure.java.io :as io])
-  (:import (javax.swing JFrame Box UIManager)
-           (java.awt Insets)
-           (javax.swing.border EmptyBorder)))
+  (:import (javax.swing JFrame Box UIManager JPanel JScrollPane ScrollPaneConstants JEditorPane JTextPane)
+           (java.awt Insets Color BorderLayout)
+           (javax.swing.border EmptyBorder)
+           (javax.swing.text SimpleAttributeSet StyleConstants PlainDocument)
+           (com.den.ses WrapEditorKit)
+           ))
 
 
 (defonce title (atom "The R.E.P.L."))
@@ -13,24 +17,28 @@
 (defonce main-frame (atom nil))
 
 
+
+(defn styled-text*
+  [& {:as opts}]
+  (apply-options (JTextPane.) opts))
+
+
 (defn- create-editor
   []
-  (let [editor (text :id :editor-text-area
-                     :multi-line? true
-                     :font (seesaw.font/font :name :monospaced :size 11)
-                     :wrap-lines? true)
-        _      (.setTabSize editor 4)
-        _      (.setMargin editor (Insets. 5 5 5 5))]
+  (let [editor (styled-text* :id :editor-text-area
+                             :styles [[:font (seesaw.font/font :name :monospaced :size 2)]])
+        _      (.setEditorKit editor (WrapEditorKit.))
+        _      (.setMargin editor (Insets. 5 5 5 5))
+        ]
     editor))
 
 
 (defn- create-repl
   []
-  (let [repl (text :id :repl-text-area
-                   :multi-line? true
-                   :font (seesaw.font/font :name :monospaced :size 11)
-                   :editable? false)
-        _    (.setTabSize repl 4)
+  (let [repl (styled-text :id :repl-text-area
+                          :font (seesaw.font/font :name :monospaced :size 11)
+                          :editable? false)
+        ;_    (.setTabSize repl 4)
         _    (.setMargin repl (Insets. 5 5 5 5))]
     repl))
 
@@ -105,8 +113,8 @@
 (comment
   (ns-publics *ns*)
   (meta #'seesaw.rsyntax/text-area)
-  (dev/show-options (text))
-  (dev/show-events (seesaw.rsyntax/text-area))
+  (dev/show-options (styled-text))
+  (dev/show-events (styled-text))
   (select @main-frame [:#repl-stop-button]))
 
 
@@ -127,6 +135,7 @@
       (.setExtendedState frame (bit-or (.getExtendedState frame) JFrame/MAXIMIZED_BOTH))
       (show! frame)
       (reset! main-frame frame))))
+
 
 
 (comment
