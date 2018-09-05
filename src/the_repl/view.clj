@@ -4,18 +4,15 @@
             [seesaw.dev :as dev]
             [seesaw.icon :as icon]
             [clojure.java.io :as io])
-  (:import (javax.swing JFrame Box UIManager JPanel JScrollPane ScrollPaneConstants JEditorPane JTextPane)
-           (java.awt Insets Color BorderLayout)
+  (:import (javax.swing JFrame Box JTextPane)
+           (java.awt Insets)
            (javax.swing.border EmptyBorder)
-           (javax.swing.text SimpleAttributeSet StyleConstants PlainDocument)
-           (com.den.ses WrapEditorKit)
-           ))
+           (com.den.ses WrapEditorKit)))
 
 
 (defonce title (atom "The R.E.P.L."))
 
 (defonce main-frame (atom nil))
-
 
 
 (defn styled-text*
@@ -72,7 +69,7 @@
            :icon (get-icon "config.png")) :separator
    (button :id :run-code-button
            :size button-size
-           :icon (get-icon "run.png"))])
+           :icon (get-icon "run.png")) :separator])
 
 
 (defn- create-toolbars-repl-options

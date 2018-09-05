@@ -12,7 +12,9 @@
 
 (defn- append-to-repl
   [s]
-  (.append (util/get-widget-by-id :repl-text-area) s))
+  (let [pane (util/get-widget-by-id :repl-text-area)
+        doc  (.getDocument pane)]
+    (.insertString doc (.getLength doc) s nil)))
 
 
 (defn- run-code-in-repl

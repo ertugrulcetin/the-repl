@@ -1,21 +1,9 @@
 package com.den.ses;
 
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.BoxView;
-import javax.swing.text.ComponentView;
-import javax.swing.text.Element;
-import javax.swing.text.IconView;
-import javax.swing.text.LabelView;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.View;
-import javax.swing.text.ViewFactory;
-import java.awt.event.*;
-import javax.swing.*;
 import javax.swing.text.*;
-import java.awt.BorderLayout;
 
 public class WrapEditorKit extends StyledEditorKit {
-    ViewFactory defaultFactory = new WrapColumnFactory();
+    private ViewFactory defaultFactory = new WrapColumnFactory();
 
     public ViewFactory getViewFactory() {
         return defaultFactory;
@@ -32,26 +20,26 @@ public class WrapEditorKit extends StyledEditorKit {
         public View create(Element elem) {
             String kind = elem.getName();
             if (kind != null) {
-                if (kind.equals(AbstractDocument.ContentElementName)) {
-                    return new WrapLabelView(elem);
-                } else if (kind.equals(AbstractDocument.ParagraphElementName)) {
-                    return new NoWrapParagraphView(elem);
-                } else if (kind.equals(AbstractDocument.SectionElementName)) {
-                    return new BoxView(elem, View.Y_AXIS);
-                } else if (kind.equals(StyleConstants.ComponentElementName)) {
-                    return new ComponentView(elem);
-                } else if (kind.equals(StyleConstants.IconElementName)) {
-                    return new IconView(elem);
+                switch (kind) {
+                    case AbstractDocument.ContentElementName:
+                        return new WrapLabelView(elem);
+                    case AbstractDocument.ParagraphElementName:
+                        return new NoWrapParagraphView(elem);
+                    case AbstractDocument.SectionElementName:
+                        return new BoxView(elem, View.Y_AXIS);
+                    case StyleConstants.ComponentElementName:
+                        return new ComponentView(elem);
+                    case StyleConstants.IconElementName:
+                        return new IconView(elem);
                 }
             }
 
-            // default to text display
             return new LabelView(elem);
         }
     }
 
     class NoWrapParagraphView extends ParagraphView {
-        public NoWrapParagraphView(Element elem) {
+        NoWrapParagraphView(Element elem) {
             super(elem);
         }
 
@@ -65,7 +53,7 @@ public class WrapEditorKit extends StyledEditorKit {
     }
 
     class WrapLabelView extends LabelView {
-        public WrapLabelView(Element elem) {
+        WrapLabelView(Element elem) {
             super(elem);
         }
 
@@ -81,7 +69,7 @@ public class WrapEditorKit extends StyledEditorKit {
                 try {
                     //if the view contains line break char return forced break
                     if (getDocument().getText(p0, p1 - p0)
-                                     .indexOf("\r") >= 0) {
+                                     .contains("\r")) {
                         return View.ForcedBreakWeight;
                     }
                 } catch (BadLocationException ex) {
