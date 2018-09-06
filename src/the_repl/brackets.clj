@@ -14,14 +14,16 @@
         m                     (into {} (loop [d (vec parens)
                                               r #{}]
                                          (if (seq d)
-                                           (let [vv               (filter (fn [[[p1 i1] [p2 i2]]]
-                                                                            (when (and (= \( p1) (= \) p2))
-                                                                              [[p1 i1] [p2 i2]])) (map (fn [x y]
-                                                                                                         [x y]) d (rest d)))
-                                                 indices          (map (fn [[[_ idx1] [_ idx2]]]
-                                                                         [idx1 idx2]) vv)
-                                                 removed-elements (set (apply concat vv))]
-                                             (recur (remove removed-elements d) (clojure.set/union r (set indices))))
+                                           (let [vv                (filter (fn [[[p1 i1] [p2 i2]]]
+                                                                             (when (and (= \( p1) (= \) p2))
+                                                                               [[p1 i1] [p2 i2]])) (map (fn [x y]
+                                                                                                          [x y]) d (rest d)))
+                                                 indices           (map (fn [[[_ idx1] [_ idx2]]]
+                                                                          [idx1 idx2]) vv)
+                                                 found-elements    (set (apply concat vv))
+                                                 remained-elements (remove found-elements d)
+                                                 remained-elements (if (empty? found-elements) [] remained-elements)]
+                                             (recur remained-elements (clojure.set/union r (set indices))))
                                            r)))]
     (reset! code-char-indices seq-chars)
     (reset! bracket-open-close-indices {:open-bracket-indices open-brackets-indices

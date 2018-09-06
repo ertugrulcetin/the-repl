@@ -116,7 +116,6 @@
                               painter           (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
                               _                 (brackets/create-match-brackets-indices-map (value editor))
                               close-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])]
-                          (println "Open: " caret-idx " - Close: " close-bracket-idx)
                           (doseq [h all-his]
                             (.removeHighlight hi h))
                           (when close-bracket-idx
