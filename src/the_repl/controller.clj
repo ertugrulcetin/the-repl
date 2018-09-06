@@ -5,9 +5,12 @@
             [the-repl.util :as util]
             [the-repl.view :as view]
             [the-repl.core :as core]
+            [the-repl.brackets :as brackets]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [kezban.core :refer :all]))
+            [kezban.core :refer :all])
+  (:import (java.awt Color)
+           (javax.swing.text StyleConstants SimpleAttributeSet DefaultHighlighter$DefaultHighlightPainter)))
 
 
 (defn- append-to-repl
@@ -103,6 +106,22 @@
                            (core/stop-server)
                            (append-to-repl "REPL Stopped."))))
 
+
+(listen (util/get-widget-by-id :editor-text-area)
+        :caret-update (fn [_]
+                        (let [editor            (util/get-widget-by-id :editor-text-area)
+                              caret-idx         (.getCaretPosition editor)
+                              hi                (.getHighlighter editor)
+                              all-his           (.getHighlights hi)
+                              painter           (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+                              _                 (brackets/create-match-brackets-indices-map (value editor))
+                              close-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])]
+                          (println "Open: " caret-idx " - Close: " close-bracket-idx)
+                          (doseq [h all-his]
+                            (.removeHighlight hi h))
+                          (when close-bracket-idx
+                            (.addHighlight hi caret-idx (inc caret-idx) painter)
+                            (.addHighlight hi close-bracket-idx (inc close-bracket-idx) painter)))))
 
 (defn register-editor-events
   []

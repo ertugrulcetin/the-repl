@@ -111,7 +111,7 @@
   (ns-publics *ns*)
   (meta #'seesaw.rsyntax/text-area)
   (dev/show-options (styled-text))
-  (dev/show-events (styled-text))
+  (dev/show-events (styled-text*))
   (select @main-frame [:#repl-stop-button]))
 
 

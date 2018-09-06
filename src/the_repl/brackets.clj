@@ -9,12 +9,20 @@
 (defn create-match-brackets-indices-map
   [code]
   (let [seq-chars             (vec (seq code))
-        parens                (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) (keep-indexed (fn [i e] [e i]) seq-chars))
+        parens                (filter (fn [[e _]] (#{\( \)} e)) (keep-indexed (fn [i e] [e i]) seq-chars))
         open-brackets-indices (map (fn [[_ i]] i) (filter (fn [[e _]] (#{\(} e)) parens))
-        p                     (partition 2 (partition-by (fn [[e _]] e) parens))
-        m                     (apply merge (for [x p]
-                                             (into {} (map (fn [[_ i1] [_ i2]]
-                                                             [i1 i2]) (first x) (reverse (second x))))))]
+        m                     (into {} (loop [d (vec parens)
+                                              r #{}]
+                                         (if (seq d)
+                                           (let [vv               (filter (fn [[[p1 i1] [p2 i2]]]
+                                                                            (when (and (= \( p1) (= \) p2))
+                                                                              [[p1 i1] [p2 i2]])) (map (fn [x y]
+                                                                                                         [x y]) d (rest d)))
+                                                 indices          (map (fn [[[_ idx1] [_ idx2]]]
+                                                                         [idx1 idx2]) vv)
+                                                 removed-elements (set (apply concat vv))]
+                                             (recur (remove removed-elements d) (clojure.set/union r (set indices))))
+                                           r)))]
     (reset! code-char-indices seq-chars)
     (reset! bracket-open-close-indices {:open-bracket-indices open-brackets-indices
                                         :open                 m
@@ -35,3 +43,6 @@
                      :else
                      [start-idx (+ start-idx (count fn-chars))])))
                (:open-bracket-indices @bracket-open-close-indices))))
+
+@bracket-open-close-indices
+(count (apply str @code-char-indices))
