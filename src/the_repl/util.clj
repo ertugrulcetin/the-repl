@@ -15,3 +15,4 @@
 ;      sd     (.getStyledDocument (get-widget-by-id :editor-text-area))
 ;      _      (StyleConstants/setForeground sas Color/BLACK)]
 ;  (.setCharacterAttributes sd 10 25 sas true))
+

@@ -38,7 +38,6 @@
             m)) {}
         (get-bracket-indexes-map))
 
-(time (dotimes [_ 10000] (doall (get-bracket-indexes-map))))
 
 (def m {"(" [50 42 30]
         ")" [35 48 59]})
@@ -47,44 +46,38 @@
           ) [] (get ")" m))
 
 
-(defn split-equally
-  [num coll]
-  "Split a collection into a vector of (as close as possible) equally sized parts"
-  (loop [num   num
-         parts []
-         coll  coll
-         c     (count coll)]
-    (if (<= num 0)
-      parts
-      (let [t (quot (+ c num -1) num)]
-        (recur (dec num) (conj parts (take t coll)) (drop t coll) (- c t))))))
+(def close-p-i (atom (apply sorted-set-by (cons (fn [a b] (> a b)) [35 48 59]))))
 
-(defmacro dopar
-  [thread-count [sym coll] & body]
-  `(doall (pmap
-            (fn [vals#]
-              (for [~sym vals#]
-                ~@body))
-            (split-equally ~thread-count ~coll))))
+(def diff (atom nil))
 
-(def rr (dopar 5 [open-p-i (range 0 1000)]
-               (dopar 5 [close-p-i (range 1000 2000)]
-                      {:open-close-index [open-p-i close-p-i]
-                       :diff             (Math/abs (- open-p-i close-p-i))})))
-
-(comment (def rr (for [open-p-i  (range 0 1000)
-                       close-p-i (range 1000 2000)
-                       :when (< open-p-i close-p-i)]
-                   {:open-close-index [open-p-i close-p-i]
-                    :diff             (Math/abs (- open-p-i close-p-i))})))
-
-(require '[clojure.core.reducers :as r])
+(reduce (fn [result v]
+          (clojure.set/union result #{[v (reduce (fn [_ c]
+                                                   (let [d (Math/abs (- v c))]
+                                                     (println "V: " v " C: " c " Diff: " d)
+                                                     (if (or (not @diff) (< d @diff))
+                                                       (do
+                                                         (reset! diff d)
+                                                         nil)
+                                                       (do
+                                                         (println "C: " c)
+                                                         (reset! diff nil)
+                                                         (swap! close-p-i clojure.set/difference #{c})
+                                                         (reduced c))))) nil @close-p-i)]}))
+        #{}
+        (apply sorted-set-by (cons (fn [a b] (> a b)) [50 42 30])))
 
 
-(time (dotimes [_ 1]
-        (vals (r/reduce (fn [result-m {:keys [open-close-index]}]
-                          (if (get result-m (first open-close-index))
-                            result-m
-                            (assoc result-m (first open-close-index) open-close-index)))
-                        {}
-                        (sort-by :diff rr)))))
+(time (dotimes [_ 1] (doall (for [open-p-i  (range 0 1000)
+                                  close-p-i (range 1000 2000)
+                                  :when (< open-p-i close-p-i)]
+                              {:open-close-index [open-p-i close-p-i]
+                               :diff             (Math/abs (- open-p-i close-p-i))}))))
+
+(comment (time (dotimes [_ 10]
+                 (vals (reduce (fn [result-m {:keys [open-close-index]}]
+                                 (if (get result-m (first open-close-index))
+                                   result-m
+                                   (assoc result-m (first open-close-index) open-close-index)))
+                               {}
+                               (sort-by :diff rr))))))
+
