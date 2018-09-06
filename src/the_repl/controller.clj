@@ -109,18 +109,22 @@
 
 (listen (util/get-widget-by-id :editor-text-area)
         :caret-update (fn [_]
-                        (let [editor            (util/get-widget-by-id :editor-text-area)
-                              caret-idx         (.getCaretPosition editor)
-                              hi                (.getHighlighter editor)
-                              all-his           (.getHighlights hi)
-                              painter           (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-                              _                 (brackets/create-match-brackets-indices-map (value editor))
-                              close-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])]
+                        (let [editor              (util/get-widget-by-id :editor-text-area)
+                              caret-idx           (.getCaretPosition editor)
+                              hi                  (.getHighlighter editor)
+                              all-his             (.getHighlights hi)
+                              painter             (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+                              _                   (brackets/create-match-brackets-indices-map (value editor))
+                              closing-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])
+                              opening-bracket-idx (get-in @brackets/bracket-open-close-indices [:close (dec caret-idx)])]
                           (doseq [h all-his]
                             (.removeHighlight hi h))
-                          (when close-bracket-idx
+                          (when closing-bracket-idx
                             (.addHighlight hi caret-idx (inc caret-idx) painter)
-                            (.addHighlight hi close-bracket-idx (inc close-bracket-idx) painter)))))
+                            (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
+                          (when opening-bracket-idx
+                            (.addHighlight hi (dec caret-idx) caret-idx painter)
+                            (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter)))))
 
 (defn register-editor-events
   []
