@@ -120,21 +120,21 @@
                                       _                   (brackets/create-match-brackets-indices-map (value editor))
                                       closing-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])
                                       opening-bracket-idx (get-in @brackets/bracket-open-close-indices [:close (dec caret-idx)])]
-                                  (doseq [h all-his]
-                                    (.removeHighlight hi h))
-                                  (when closing-bracket-idx
-                                    (.addHighlight hi caret-idx (inc caret-idx) painter)
-                                    (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
-                                  (when opening-bracket-idx
-                                    (.addHighlight hi (dec caret-idx) caret-idx painter)
-                                    (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
                                   (invoke-later
+                                    (doseq [h all-his]
+                                      (.removeHighlight hi h))
+                                    (when closing-bracket-idx
+                                      (.addHighlight hi caret-idx (inc caret-idx) painter)
+                                      (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
+                                    (when opening-bracket-idx
+                                      (.addHighlight hi (dec caret-idx) caret-idx painter)
+                                      (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas Color/BLACK)
                                           _   (.setCharacterAttributes sd 0 (count code) sas true)
                                           _   (StyleConstants/setForeground sas (Color/decode "#000080"))
-                                          _   (StyleConstants/setBold sas false)]
+                                          _   (StyleConstants/setBold sas true)]
                                       (doseq [[start-i end-i] (brackets/get-fn-highlighting-indices)]
                                         (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
                                     (let [sas (SimpleAttributeSet.)

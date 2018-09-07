@@ -3,6 +3,7 @@
             [seesaw.options :refer [apply-options]]
             [seesaw.dev :as dev]
             [seesaw.icon :as icon]
+            [seesaw.font :as font]
             [clojure.java.io :as io])
   (:import (javax.swing JFrame Box JTextPane)
            (java.awt Insets)
@@ -23,7 +24,8 @@
 (defn- create-editor
   []
   (let [editor (styled-text* :id :editor-text-area
-                             :styles [[:font (seesaw.font/font :name :monospaced :size 2)]])
+                             :font (font/font :name :monospaced :size 12)
+                             :background "#F5EEDF")
         _      (.setEditorKit editor (WrapEditorKit.))
         _      (.setMargin editor (Insets. 5 5 5 5))
         ]
@@ -32,9 +34,10 @@
 
 (defn- create-repl
   []
-  (let [repl (styled-text :id :repl-text-area
-                          :font (seesaw.font/font :name :monospaced :size 11)
-                          :editable? false)
+  (let [repl (styled-text* :id :repl-text-area
+                           :font (font/font :name :monospaced :size 12)
+                           :background "#F5EEDF"
+                           :editable? false)
         ;_    (.setTabSize repl 4)
         _    (.setMargin repl (Insets. 5 5 5 5))]
     repl))
