@@ -12,12 +12,29 @@
   (filter (fn [[e _]] ((set brackets) e)) (keep-indexed (fn [i e] [e i]) seq-chars)))
 
 
+(defn get-keyword-idxs
+  []
+  (let [colon (filter (fn [[e _]] (= \: e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
+    (map (fn [[_ i]]
+           (let [start-idx     i
+                 keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
+                                           (drop start-idx @code-char-indices))]
+             (cond
+               (not (first keyword-chars))
+               [0 0]
+
+               :else
+               [start-idx (+ start-idx (count keyword-chars))])))
+         colon)))
+
+
 (defn get-char-idxs
   []
   (let [idxs (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
     (map (fn [[e idx]]
            (let [char-token (apply str (map (fn [i]
-                                              (nth @code-char-indices i nil)) (range (inc idx) (+ idx (inc (count "backspace"))))))]
+                                              (nth @code-char-indices i nil))
+                                            (range (inc idx) (+ idx (inc (count "backspace"))))))]
              (cond
                (str/starts-with? char-token "space")
                [e idx (inc (count "space"))]
@@ -90,5 +107,3 @@
                      :else
                      [start-idx (+ start-idx (count fn-chars))])))
                (:open-bracket-indices @bracket-open-close-indices))))
-
-(get-fn-highlighting-indices)

@@ -108,6 +108,7 @@
                            (core/stop-server)
                            (append-to-repl "REPL Stopped."))))
 
+
 (def ll (listen (util/get-widget-by-id :editor-text-area)
                 :caret-update (fn [_]
                                 (let [editor              (util/get-widget-by-id :editor-text-area)
@@ -132,7 +133,7 @@
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas Color/BLACK)
                                           _   (.setCharacterAttributes sd 0 (count code) sas true)
-                                          _   (StyleConstants/setForeground sas Color/BLUE)
+                                          _   (StyleConstants/setForeground sas (Color/decode "#000080"))
                                           _   (StyleConstants/setBold sas false)]
                                       (doseq [[start-i end-i] (brackets/get-fn-highlighting-indices)]
                                         (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
@@ -140,7 +141,13 @@
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
                                       (doseq [[_ idx v] (brackets/get-char-idxs)]
-                                        (.setCharacterAttributes sd idx v sas true))))))))
+                                        (.setCharacterAttributes sd idx v sas true)))
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
+                                          _   (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+                                          _   (StyleConstants/setItalic sas true)]
+                                      (doseq [[start-i end-i] (brackets/get-keyword-idxs)]
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))))))))
 
 (comment
   (ll))
