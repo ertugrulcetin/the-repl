@@ -11,6 +11,12 @@
   (filter (fn [[e _]] ((set brackets) e)) (keep-indexed (fn [i e] [e i]) seq-chars)))
 
 
+(defn get-char-idxs
+  []
+  (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices)))
+
+(get-char-idxs)
+
 (defn- find-bracket-match-map
   [open-char close-char brackets]
   (into {} (loop [d brackets
@@ -28,12 +34,14 @@
                  (recur remained-elements (clojure.set/union r (set indices))))
                r))))
 
+
 (defn create-match-brackets-indices-map
   [code]
   (let [seq-chars             (vec (seq code))
         bracket-types         [[\( \)] [\[ \]] [\{ \}]]
         parens                (filter seq (map #(get-brackets-idxs-by-type % seq-chars) bracket-types))
-        open-brackets-indices (map (fn [[_ i]] i) (filter (fn [[e _]] (#{\(} e)) parens))
+        [parenthesis _ _] parens
+        open-brackets-indices (map (fn [[_ i]] i) (filter (fn [[e _]] (#{\(} e)) parenthesis))
         m                     (mapcat (fn [[open-c close-c] brackets]
                                         (find-bracket-match-map open-c close-c brackets)) bracket-types parens)
         m                     (into {} m)]
@@ -48,13 +56,15 @@
   (filter #(not= (first %) (second %))
           (map (fn [i]
                  (let [start-idx (inc i)
-                       fn-chars  (take-while #(not (#{\newline \space \tab \~} %))
+                       fn-chars  (take-while #(not (#{\newline \space \tab \~ \# \' \@ \) \] \}} %))
                                              (drop start-idx @code-char-indices))]
                    (cond
-                     (Character/isDigit ^Character (first fn-chars))
+                     (or (not (first fn-chars))
+                         (Character/isDigit ^Character (first fn-chars)))
                      [0 0]
 
                      :else
                      [start-idx (+ start-idx (count fn-chars))])))
                (:open-bracket-indices @bracket-open-close-indices))))
 
+(get-fn-highlighting-indices)
