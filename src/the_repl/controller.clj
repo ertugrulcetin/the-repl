@@ -137,10 +137,8 @@
                             (let [sas (SimpleAttributeSet.)
                                   sd  (.getStyledDocument editor)
                                   _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
-                              (doseq [[_ idx] (brackets/get-char-idxs)]
-                                (.setCharacterAttributes sd idx 2 sas true)))))))
-
-
+                              (doseq [[_ idx v] (brackets/get-char-idxs)]
+                                (.setCharacterAttributes sd idx v sas true)))))))
 
 (defn register-editor-events
   []

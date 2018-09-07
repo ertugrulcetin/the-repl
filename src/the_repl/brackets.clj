@@ -1,4 +1,5 @@
-(ns the-repl.brackets)
+(ns the-repl.brackets
+  (:require [clojure.string :as str]))
 
 
 (def code-char-indices (atom []))
@@ -13,9 +14,32 @@
 
 (defn get-char-idxs
   []
-  (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices)))
+  (let [idxs (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
+    (map (fn [[e idx]]
+           (let [char-token (apply str (map (fn [i]
+                                              (nth @code-char-indices i nil)) (range (inc idx) (+ idx (inc (count "backspace"))))))]
+             (cond
+               (str/starts-with? char-token "space")
+               [e idx (inc (count "space"))]
 
-(get-char-idxs)
+               (str/starts-with? char-token "newline")
+               [e idx (inc (count "newline"))]
+
+               (str/starts-with? char-token "tab")
+               [e idx (inc (count "tab"))]
+
+               (str/starts-with? char-token "backspace")
+               [e idx (inc (count "backspace"))]
+
+               (str/starts-with? char-token "formfeed")
+               [e idx (inc (count "formfeed"))]
+
+               (str/starts-with? char-token "return")
+               [e idx (inc (count "return"))]
+
+               :else
+               [e idx 2]))) idxs)))
+
 
 (defn- find-bracket-match-map
   [open-char close-char brackets]
