@@ -6,11 +6,33 @@
 
 (def bracket-open-close-indices (atom {}))
 
+(def double-quote-indices (atom ()))
+
+
+(defn- get-eliminated-indexed-seq-chars-vec
+  []
+  (filter (fn [[_ i]]
+            (loop [[f & others :as d-indices] @double-quote-indices
+                   result false]
+                  (if (seq d-indices)
+                    (recur others (or result (and (> i (first f)) (< i (second f)))))
+                    result))) (keep-indexed (fn [i e] [e i]) @code-char-indices)))
+
 
 (defn- get-brackets-idxs-by-type
   [brackets seq-chars]
   (filter (fn [[e _]] ((set brackets) e)) (keep-indexed (fn [i e] [e i]) seq-chars)))
 
+
+(defn get-double-quote-idx
+  []
+  (partition 2 (reduce (fn [r [e i]]
+                         (if (and (= \" e) (not= \\ (nth @code-char-indices (dec i) nil)))
+                           (conj r i)
+                           r))
+                       []
+                       (keep-indexed (fn [i e] [e i]) @code-char-indices))))
+(get-double-quote-idx)
 
 (defn get-keyword-idxs
   []
@@ -79,6 +101,8 @@
 (defn create-match-brackets-indices-map
   [code]
   (let [seq-chars             (vec (seq code))
+        _                     (reset! code-char-indices seq-chars)
+        _                     (reset! double-quote-indices (get-double-quote-idx))
         bracket-types         [[\( \)] [\[ \]] [\{ \}]]
         parens                (filter seq (map #(get-brackets-idxs-by-type % seq-chars) bracket-types))
         [parenthesis _ _] parens
@@ -86,7 +110,6 @@
         m                     (mapcat (fn [[open-c close-c] brackets]
                                         (find-bracket-match-map open-c close-c brackets)) bracket-types parens)
         m                     (into {} m)]
-    (reset! code-char-indices seq-chars)
     (reset! bracket-open-close-indices {:open-bracket-indices open-brackets-indices
                                         :open                 m
                                         :close                (clojure.set/map-invert m)})))

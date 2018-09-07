@@ -147,7 +147,12 @@
                                           _   (StyleConstants/setForeground sas (Color/decode "#660E7A"))
                                           _   (StyleConstants/setItalic sas true)]
                                       (doseq [[start-i end-i] (brackets/get-keyword-idxs)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))))))))
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
+                                          _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
+                                      (doseq [[start-i end-i] (brackets/get-double-quote-idx)]
+                                        (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))))
 
 (comment
   (ll))
