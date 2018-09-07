@@ -9,47 +9,6 @@
 (def double-quote-indices (atom ()))
 
 
-(defn- get-eliminated-indexed-seq-chars-vec
-  []
-  (filter (fn [[_ i]]
-            (loop [[f & others :as d-indices] @double-quote-indices
-                   result false]
-                  (if (seq d-indices)
-                    (recur others (or result (and (> i (first f)) (< i (second f)))))
-                    result))) (keep-indexed (fn [i e] [e i]) @code-char-indices)))
-
-
-(defn- get-brackets-idxs-by-type
-  [brackets seq-chars]
-  (filter (fn [[e _]] ((set brackets) e)) (keep-indexed (fn [i e] [e i]) seq-chars)))
-
-
-(defn get-double-quote-idx
-  []
-  (partition 2 (reduce (fn [r [e i]]
-                         (if (and (= \" e) (not= \\ (nth @code-char-indices (dec i) nil)))
-                           (conj r i)
-                           r))
-                       []
-                       (keep-indexed (fn [i e] [e i]) @code-char-indices))))
-(get-double-quote-idx)
-
-(defn get-keyword-idxs
-  []
-  (let [colon (filter (fn [[e _]] (= \: e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
-    (map (fn [[_ i]]
-           (let [start-idx     i
-                 keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
-                                           (drop start-idx @code-char-indices))]
-             (cond
-               (not (first keyword-chars))
-               [0 0]
-
-               :else
-               [start-idx (+ start-idx (count keyword-chars))])))
-         colon)))
-
-
 (defn get-char-idxs
   []
   (let [idxs (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
@@ -78,6 +37,51 @@
 
                :else
                [e idx 2]))) idxs)))
+
+
+(defn- get-eliminated-indexed-seq-chars-vec
+  [seq-chars]
+  (let [open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx)) (filter (fn [[_ _ len]] (= 2 len)) (get-char-idxs))))]
+    (filter (fn [[_ i]]
+              (and (not (loop [[f & others :as d-indices] @double-quote-indices
+                               result false]
+                          (if (seq d-indices)
+                            (recur others (or result (and (> i (first f)) (< i (second f)))))
+                            result)))
+                   (not (open-close-char-indices-set i))))
+            (keep-indexed (fn [i e] [e i]) seq-chars))))
+
+
+(defn- get-brackets-idxs-by-type
+  [brackets seq-chars]
+  (filter (fn [[e _]] ((set brackets) e)) (get-eliminated-indexed-seq-chars-vec seq-chars)))
+
+
+(defn get-double-quote-idx
+  []
+  (partition 2 (reduce (fn [r [e i]]
+                         (if (and (= \" e) (not= \\ (nth @code-char-indices (dec i) nil)))
+                           (conj r i)
+                           r))
+                       []
+                       (keep-indexed (fn [i e] [e i]) @code-char-indices))))
+
+
+(defn get-keyword-idxs
+  []
+  (let [colon (filter (fn [[e _]] (= \: e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
+    (filter #(not= (first %) (second %))
+            (map (fn [[_ i]]
+                   (let [start-idx     i
+                         keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
+                                                   (drop start-idx @code-char-indices))]
+                     (cond
+                       (not (first keyword-chars))
+                       [0 0]
+
+                       :else
+                       [start-idx (+ start-idx (count keyword-chars))])))
+                 colon))))
 
 
 (defn- find-bracket-match-map
