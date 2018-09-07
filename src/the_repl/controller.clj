@@ -10,7 +10,9 @@
             [clojure.java.io :as io]
             [kezban.core :refer :all])
   (:import (java.awt Color)
-           (javax.swing.text StyleConstants SimpleAttributeSet DefaultHighlighter$DefaultHighlightPainter)))
+           (javax.swing.text StyleConstants
+                             SimpleAttributeSet
+                             DefaultHighlighter$DefaultHighlightPainter)))
 
 
 (defn- append-to-repl
@@ -106,39 +108,42 @@
                            (core/stop-server)
                            (append-to-repl "REPL Stopped."))))
 
+(def ll (listen (util/get-widget-by-id :editor-text-area)
+                :caret-update (fn [_]
+                                (let [editor              (util/get-widget-by-id :editor-text-area)
+                                      caret-idx           (.getCaretPosition editor)
+                                      hi                  (.getHighlighter editor)
+                                      all-his             (.getHighlights hi)
+                                      painter             (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+                                      code                (value editor)
+                                      _                   (brackets/create-match-brackets-indices-map (value editor))
+                                      closing-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])
+                                      opening-bracket-idx (get-in @brackets/bracket-open-close-indices [:close (dec caret-idx)])]
+                                  (doseq [h all-his]
+                                    (.removeHighlight hi h))
+                                  (when closing-bracket-idx
+                                    (.addHighlight hi caret-idx (inc caret-idx) painter)
+                                    (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
+                                  (when opening-bracket-idx
+                                    (.addHighlight hi (dec caret-idx) caret-idx painter)
+                                    (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
+                                  (invoke-later
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
+                                          _   (StyleConstants/setForeground sas Color/BLACK)
+                                          _   (.setCharacterAttributes sd 0 (count code) sas true)
+                                          _   (StyleConstants/setForeground sas Color/BLUE)
+                                          _   (StyleConstants/setBold sas false)]
+                                      (doseq [[start-i end-i] (brackets/get-fn-highlighting-indices)]
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
+                                          _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
+                                      (doseq [[_ idx v] (brackets/get-char-idxs)]
+                                        (.setCharacterAttributes sd idx v sas true))))))))
 
-(listen (util/get-widget-by-id :editor-text-area)
-        :caret-update (fn [_]
-                        (let [editor              (util/get-widget-by-id :editor-text-area)
-                              caret-idx           (.getCaretPosition editor)
-                              hi                  (.getHighlighter editor)
-                              all-his             (.getHighlights hi)
-                              painter             (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-                              code                (value editor)
-                              _                   (brackets/create-match-brackets-indices-map (value editor))
-                              closing-bracket-idx (get-in @brackets/bracket-open-close-indices [:open caret-idx])
-                              opening-bracket-idx (get-in @brackets/bracket-open-close-indices [:close (dec caret-idx)])]
-                          (doseq [h all-his]
-                            (.removeHighlight hi h))
-                          (when closing-bracket-idx
-                            (.addHighlight hi caret-idx (inc caret-idx) painter)
-                            (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
-                          (when opening-bracket-idx
-                            (.addHighlight hi (dec caret-idx) caret-idx painter)
-                            (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
-                          (invoke-later
-                            (let [sas (SimpleAttributeSet.)
-                                  sd  (.getStyledDocument editor)
-                                  _   (StyleConstants/setForeground sas Color/BLACK)
-                                  _   (.setCharacterAttributes sd 0 (count code) sas true)
-                                  _   (StyleConstants/setForeground sas Color/BLUE)]
-                              (doseq [[start-i end-i] (brackets/get-fn-highlighting-indices)]
-                                (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
-                            (let [sas (SimpleAttributeSet.)
-                                  sd  (.getStyledDocument editor)
-                                  _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
-                              (doseq [[_ idx v] (brackets/get-char-idxs)]
-                                (.setCharacterAttributes sd idx v sas true)))))))
+(comment
+  (ll))
 
 (defn register-editor-events
   []
