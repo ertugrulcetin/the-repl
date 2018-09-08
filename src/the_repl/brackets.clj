@@ -3,52 +3,46 @@
             [kezban.core :refer :all]))
 
 
-(def code-char-indices (atom []))
-
-(def bracket-open-close-indices (atom {}))
-
-(def double-quote-indices (atom ()))
-
-(def comment-quote-indices (atom ()))
+(defonce indices-map (atom {}))
 
 
 (defn get-comment-idxs
-  []
-  (let [s    (keep-indexed (fn [i e] [e i]) @code-char-indices)
+  [all-chars-indices]
+  (let [s    (keep-indexed (fn [i e] [e i]) all-chars-indices)
         k    (filter (fn [[e _]] (#{\; \newline} e)) s)
         k    (partition-by (fn [[c _]] c) k)
         [[[c _]]] k
         k    (if (= c \newline) (rest k) k)
         k    (partition-all 2 k)
-        size (count @code-char-indices)]
+        size (count all-chars-indices)]
     (map (fn [[[[_ start-i]] [[_ end-i]]]]
            [start-i (or end-i size)]) k)))
 
 
 (defn get-number-idxs
-  []
-  (let [s (keep-indexed (fn [i e] [e i]) @code-char-indices)
+  [all-chars-indices]
+  (let [s (keep-indexed (fn [i e] [e i]) all-chars-indices)
         k (filter (fn [[e idx]]
                     (or (and (Character/isDigit ^Character e)
                              (#{\space \newline \tab \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \( \[ \{}
-                               (nth-safe @code-char-indices (dec idx))))
-                        (when (#{\/ \.} (nth-safe @code-char-indices idx))
-                          (Character/isDigit ^Character (nth-safe @code-char-indices (dec idx))))))
+                               (nth-safe all-chars-indices (dec idx))))
+                        (when (#{\/ \.} (nth-safe all-chars-indices idx))
+                          (Character/isDigit ^Character (nth-safe all-chars-indices (dec idx))))))
                   s)
         v (filter (fn [[e idx]]
                     (when-let* [_ (Character/isDigit ^Character e)
                                 pre-idx (dec idx)
-                                c (#{\/ \.} (nth-safe @code-char-indices pre-idx))]
+                                c (#{\/ \.} (nth-safe all-chars-indices pre-idx))]
                                (in? [c pre-idx] k))) s)]
     (concat k v)))
 
 
 (defn get-char-idxs
-  []
-  (let [idxs (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
+  [all-chars-indices]
+  (let [idxs (filter (fn [[e _]] (= \\ e)) (keep-indexed (fn [i e] [e i]) all-chars-indices))]
     (map (fn [[e idx]]
            (let [char-token (apply str (map (fn [i]
-                                              (nth @code-char-indices i nil))
+                                              (nth all-chars-indices i nil))
                                             (range (inc idx) (+ idx (inc (count "backspace"))))))]
              (cond
                (str/starts-with? char-token "space")
@@ -75,46 +69,47 @@
 
 
 (defn- get-eliminated-indexed-seq-chars-vec
-  [seq-chars]
-  (let [open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx)) (filter (fn [[_ _ len]] (= 2 len)) (get-char-idxs))))]
+  [indices-map]
+  (let [open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx))
+                                              (filter (fn [[_ _ len]] (= 2 len)) (:char-indices indices-map))))]
     (filter (fn [[_ i]]
-              (and (not (loop [[f & others :as d-indices] @double-quote-indices
+              (and (not (loop [[f & others :as d-indices] (:double-quote-indices indices-map)
                                result false]
                           (if (seq d-indices)
                             (recur others (or result (and (> i (first f)) (< i (second f)))))
                             result)))
-                   (not (loop [[f & others :as d-indices] @comment-quote-indices
+                   (not (loop [[f & others :as d-indices] (:comment-quote-indices indices-map)
                                result false]
                           (if (seq d-indices)
                             (recur others (or result (and (> i (first f)) (< i (second f)))))
                             result)))
                    (not (open-close-char-indices-set i))))
-            (keep-indexed (fn [i e] [e i]) seq-chars))))
+            (keep-indexed (fn [i e] [e i]) (:all-chars-indices indices-map)))))
 
 
 (defn- get-brackets-idxs-by-type
-  [brackets seq-chars]
-  (filter (fn [[e _]] ((set brackets) e)) (get-eliminated-indexed-seq-chars-vec seq-chars)))
+  [brackets indices-map]
+  (filter (fn [[e _]] ((set brackets) e)) (get-eliminated-indexed-seq-chars-vec indices-map)))
 
 
 (defn get-double-quote-idx
-  []
+  [all-chars-indices]
   (partition 2 (reduce (fn [r [e i]]
-                         (if (and (= \" e) (not= \\ (nth @code-char-indices (dec i) nil)))
+                         (if (and (= \" e) (not= \\ (nth all-chars-indices (dec i) nil)))
                            (conj r i)
                            r))
                        []
-                       (keep-indexed (fn [i e] [e i]) @code-char-indices))))
+                       (keep-indexed (fn [i e] [e i]) all-chars-indices))))
 
 
 (defn get-keyword-idxs
-  []
-  (let [colon (filter (fn [[e _]] (= \: e)) (keep-indexed (fn [i e] [e i]) @code-char-indices))]
+  [all-chars-indices]
+  (let [colon (filter (fn [[e _]] (= \: e)) (keep-indexed (fn [i e] [e i]) all-chars-indices))]
     (filter #(not= (first %) (second %))
             (map (fn [[_ i]]
                    (let [start-idx     i
                          keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
-                                                   (drop start-idx @code-char-indices))]
+                                                   (drop start-idx all-chars-indices))]
                      (cond
                        (not (first keyword-chars))
                        [0 0]
@@ -142,31 +137,27 @@
                r))))
 
 
-(defn create-match-brackets-indices-map
-  [code]
-  (let [seq-chars             (vec (seq code))
-        _                     (reset! code-char-indices seq-chars)
-        _                     (reset! double-quote-indices (get-double-quote-idx))
-        _                     (reset! comment-quote-indices (get-comment-idxs))
-        bracket-types         [[\( \)] [\[ \]] [\{ \}]]
-        parens                (filter seq (map #(get-brackets-idxs-by-type % seq-chars) bracket-types))
+(defn get-match-brackets-indices-map
+  [indices-map]
+  (let [bracket-types         [[\( \)] [\[ \]] [\{ \}]]
+        parens                (filter seq (map #(get-brackets-idxs-by-type % indices-map) bracket-types))
         [parenthesis _ _] parens
         open-brackets-indices (map (fn [[_ i]] i) (filter (fn [[e _]] (#{\(} e)) parenthesis))
         m                     (mapcat (fn [[open-c close-c] brackets]
                                         (find-bracket-match-map open-c close-c brackets)) bracket-types parens)
         m                     (into {} m)]
-    (reset! bracket-open-close-indices {:open-bracket-indices open-brackets-indices
-                                        :open                 m
-                                        :close                (clojure.set/map-invert m)})))
+    {:open-bracket-indices open-brackets-indices
+     :open                 m
+     :close                (clojure.set/map-invert m)}))
 
 
 (defn get-fn-highlighting-indices
-  []
+  [all-chars-indices match-brackets-indices-map]
   (filter #(not= (first %) (second %))
           (map (fn [i]
                  (let [start-idx (inc i)
                        fn-chars  (take-while #(not (#{\newline \space \tab \~ \# \' \@ \) \] \}} %))
-                                             (drop start-idx @code-char-indices))]
+                                             (drop start-idx all-chars-indices))]
                    (cond
                      (or (not (first fn-chars))
                          (Character/isDigit ^Character (first fn-chars)))
@@ -174,4 +165,19 @@
 
                      :else
                      [start-idx (+ start-idx (count fn-chars))])))
-               (:open-bracket-indices @bracket-open-close-indices))))
+               (:open-bracket-indices match-brackets-indices-map))))
+
+
+(defn generate-indices!
+  [code]
+  (reset! indices-map (letm [all-chars-indices (vec (seq code))
+                             char-indices (get-char-idxs all-chars-indices)
+                             number-indices (get-number-idxs all-chars-indices)
+                             keyword-indices (get-keyword-idxs all-chars-indices)
+                             double-quote-indices (get-double-quote-idx all-chars-indices)
+                             comment-quote-indices (get-comment-idxs all-chars-indices)
+                             match-brackets-indices (get-match-brackets-indices-map {:char-indices          char-indices
+                                                                                     :double-quote-indices  double-quote-indices
+                                                                                     :comment-quote-indices comment-quote-indices
+                                                                                     :all-chars-indices     all-chars-indices})
+                             fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)])))
