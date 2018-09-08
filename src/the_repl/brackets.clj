@@ -10,6 +10,19 @@
 (def double-quote-indices (atom ()))
 
 
+(defn get-comment-idxs
+  []
+  (let [s    (keep-indexed (fn [i e] [e i]) @code-char-indices)
+        k    (filter (fn [[e _]] (#{\; \newline} e)) s)
+        k    (partition-by (fn [[c _]] c) k)
+        [[[c _]]] k
+        k    (if (= c \newline) (rest k) k)
+        k    (partition-all 2 k)
+        size (count @code-char-indices)]
+    (map (fn [[[[_ start-i]] [[_ end-i]]]]
+           [start-i (or end-i size)]) k)))
+
+
 (defn get-number-idxs
   []
   (let [s (keep-indexed (fn [i e] [e i]) @code-char-indices)
