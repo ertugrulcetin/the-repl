@@ -129,25 +129,41 @@
                                     (when opening-bracket-idx
                                       (.addHighlight hi (dec caret-idx) caret-idx painter)
                                       (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
+
+
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas Color/BLACK)
-                                          _   (.setCharacterAttributes sd 0 (count code) sas true)
+                                          _   (.setCharacterAttributes sd 0 (count code) sas true)]
+                                      (doseq [[_ idx] (brackets/get-number-idxs)]
+                                        (.setCharacterAttributes sd idx 1 sas true)))
+
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
+                                          _   (StyleConstants/setForeground sas (Color/decode "#0000FF"))]
+                                      (doseq [[_ idx] (brackets/get-number-idxs)]
+                                        (.setCharacterAttributes sd idx 1 sas true)))
+
+                                    (let [sas (SimpleAttributeSet.)
+                                          sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#000080"))
                                           _   (StyleConstants/setBold sas true)]
                                       (doseq [[start-i end-i] (brackets/get-fn-highlighting-indices)]
                                         (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
                                       (doseq [[_ idx v] (brackets/get-char-idxs)]
                                         (.setCharacterAttributes sd idx v sas true)))
+
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#660E7A"))
                                           _   (StyleConstants/setItalic sas true)]
                                       (doseq [[start-i end-i] (brackets/get-keyword-idxs)]
                                         (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]

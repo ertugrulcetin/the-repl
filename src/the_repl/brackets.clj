@@ -1,5 +1,6 @@
 (ns the-repl.brackets
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [kezban.core :refer :all]))
 
 
 (def code-char-indices (atom []))
@@ -7,6 +8,24 @@
 (def bracket-open-close-indices (atom {}))
 
 (def double-quote-indices (atom ()))
+
+
+(defn get-number-idxs
+  []
+  (let [s (keep-indexed (fn [i e] [e i]) @code-char-indices)
+        k (filter (fn [[e idx]]
+                    (or (and (Character/isDigit ^Character e)
+                             (#{\space \newline \tab \0 \1 \2 \3 \4 \5 \6 \7 \8 \9 \( \[ \{}
+                               (nth-safe @code-char-indices (dec idx))))
+                        (when (#{\/ \.} (nth-safe @code-char-indices idx))
+                          (Character/isDigit ^Character (nth-safe @code-char-indices (dec idx))))))
+                  s)
+        v (filter (fn [[e idx]]
+                    (when-let* [_ (Character/isDigit ^Character e)
+                                pre-idx (dec idx)
+                                c (#{\/ \.} (nth-safe @code-char-indices pre-idx))]
+                               (in? [c pre-idx] k))) s)]
+    (concat k v)))
 
 
 (defn get-char-idxs
@@ -37,6 +56,7 @@
 
                :else
                [e idx 2]))) idxs)))
+
 
 
 (defn- get-eliminated-indexed-seq-chars-vec
