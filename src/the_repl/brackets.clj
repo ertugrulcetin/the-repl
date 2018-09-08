@@ -9,6 +9,8 @@
 
 (def double-quote-indices (atom ()))
 
+(def comment-quote-indices (atom ()))
+
 
 (defn get-comment-idxs
   []
@@ -81,6 +83,11 @@
                           (if (seq d-indices)
                             (recur others (or result (and (> i (first f)) (< i (second f)))))
                             result)))
+                   (not (loop [[f & others :as d-indices] @comment-quote-indices
+                               result false]
+                          (if (seq d-indices)
+                            (recur others (or result (and (> i (first f)) (< i (second f)))))
+                            result)))
                    (not (open-close-char-indices-set i))))
             (keep-indexed (fn [i e] [e i]) seq-chars))))
 
@@ -140,6 +147,7 @@
   (let [seq-chars             (vec (seq code))
         _                     (reset! code-char-indices seq-chars)
         _                     (reset! double-quote-indices (get-double-quote-idx))
+        _                     (reset! comment-quote-indices (get-comment-idxs))
         bracket-types         [[\( \)] [\[ \]] [\{ \}]]
         parens                (filter seq (map #(get-brackets-idxs-by-type % seq-chars) bracket-types))
         [parenthesis _ _] parens

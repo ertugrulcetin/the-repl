@@ -168,13 +168,13 @@
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#808080"))
                                           _   (StyleConstants/setItalic sas true)]
-                                      (doseq [[start-i end-i] (brackets/get-comment-idxs)]
+                                      (doseq [[start-i end-i] @brackets/comment-quote-indices]
                                         (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
 
                                     (let [sas (SimpleAttributeSet.)
                                           sd  (.getStyledDocument editor)
                                           _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
-                                      (doseq [[start-i end-i] (brackets/get-double-quote-idx)]
+                                      (doseq [[start-i end-i] @brackets/double-quote-indices]
                                         (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))))
 
 (comment
