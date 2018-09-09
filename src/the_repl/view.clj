@@ -10,6 +10,7 @@
            (javax.swing.border EmptyBorder)
            (com.den.ses WrapEditorKit)))
 
+(com.den.ses.WrapEditorKit.)
 
 (defonce title (atom "The R.E.P.L."))
 

@@ -109,71 +109,64 @@
                            (append-to-repl "REPL Stopped."))))
 
 
-(def ll (listen (util/get-widget-by-id :editor-text-area)
-                :caret-update (fn [_]
-                                (let [editor              (util/get-widget-by-id :editor-text-area)
-                                      caret-idx           (.getCaretPosition editor)
-                                      hi                  (.getHighlighter editor)
-                                      all-his             (.getHighlights hi)
-                                      painter             (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-                                      code                (value editor)
-                                      _                   (brackets/generate-indices! code)
-                                      closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
-                                      opening-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :close (dec caret-idx)])]
+(def ll (let [editor  (util/get-widget-by-id :editor-text-area)
+              painter (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+              sas     (SimpleAttributeSet.)
+              sd      (.getStyledDocument editor)]
+          (listen (util/get-widget-by-id :editor-text-area)
+                  :caret-update (fn [_]
                                   (invoke-later
-                                    (doseq [h all-his]
-                                      (.removeHighlight hi h))
-                                    (when closing-bracket-idx
-                                      (.addHighlight hi caret-idx (inc caret-idx) painter)
-                                      (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
-                                    (when opening-bracket-idx
-                                      (.addHighlight hi (dec caret-idx) caret-idx painter)
-                                      (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
+                                    (let [code                (value editor)
+                                          code-count          (count code)
+                                          _                   (brackets/generate-indices! code)
+                                          caret-idx           (.getCaretPosition editor)
+                                          hi                  (.getHighlighter editor)
+                                          all-his             (.getHighlights hi)
+                                          closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
+                                          opening-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :close (dec caret-idx)])]
+                                      (doseq [h all-his]
+                                        (.removeHighlight hi h))
+                                      (when closing-bracket-idx
+                                        (.addHighlight hi caret-idx (inc caret-idx) painter)
+                                        (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
+                                      (when opening-bracket-idx
+                                        (.addHighlight hi (dec caret-idx) caret-idx painter)
+                                        (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
 
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas Color/BLACK)]
-                                      (.setCharacterAttributes sd 0 (count code) sas true))
+                                      (StyleConstants/setForeground sas Color/BLACK)
+                                      (.setCharacterAttributes sd 0 code-count sas true)
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#0000FF"))]
+
+                                      (StyleConstants/setForeground sas (Color/decode "#0000FF"))
                                       (doseq [[_ idx] (:number-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd idx 1 sas true)))
+                                        (.setCharacterAttributes sd idx 1 sas true))
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#000080"))
-                                          _   (StyleConstants/setBold sas true)]
+                                      (StyleConstants/setForeground sas (Color/decode "#000080"))
+                                      (StyleConstants/setBold sas true)
                                       (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
+                                      (StyleConstants/setForeground sas (Color/decode "#007F00"))
+                                      (StyleConstants/setBold sas false)
                                       (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd idx v sas true)))
+                                        (.setCharacterAttributes sd idx v sas true))
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#660E7A"))
-                                          _   (StyleConstants/setItalic sas true)]
+                                      (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+                                      (StyleConstants/setItalic sas true)
                                       (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#808080"))
-                                          _   (StyleConstants/setItalic sas true)]
+                                      (StyleConstants/setForeground sas (Color/decode "#808080"))
+                                      (StyleConstants/setItalic sas true)
                                       (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-                                    (let [sas (SimpleAttributeSet.)
-                                          sd  (.getStyledDocument editor)
-                                          _   (StyleConstants/setForeground sas (Color/decode "#007F00"))]
+                                      (StyleConstants/setForeground sas (Color/decode "#007F00"))
+                                      (StyleConstants/setItalic sas false)
                                       (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
                                         (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))))
+
 
 (comment
   (ll))
