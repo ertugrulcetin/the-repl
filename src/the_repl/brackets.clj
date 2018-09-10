@@ -70,7 +70,7 @@
 (defn get-double-quote-idx
   [all-chars-indices char-index-vec]
   (partition 2 (reduce (fn [r [e i]]
-                         (if (and (= \" e) (not= \\ (nth all-chars-indices (dec i) nil)))
+                         (if (and (= \" e) (not= \\ (nth-safe all-chars-indices (dec i))))
                            (conj r i)
                            r))
                        []
@@ -117,26 +117,22 @@
     (persistent! index-map)))
 
 
+(defn get-indices-range-set
+  [range-vec]
+  (set (mapcat (fn [[s e]] (range (inc s) e)) range-vec)))
+
+
 (defn- get-eliminated-indexed-seq-chars-vec
   [indices-map]
   (let [open-close-char-indices-set (:open-close-char-indices-set indices-map)
-        double-quote-indices        (:double-quote-indices indices-map)
-        comment-quote-indices       (:comment-quote-indices indices-map)
+        double-quote-indices-set    (get-indices-range-set (:double-quote-indices indices-map))
+        comment-quote-indices       (get-indices-range-set (:comment-quote-indices indices-map))
+        parens-index-vec            (:parens-index-vec indices-map)
         r                           (filter (fn [[_ i]]
-                                              (and (not (loop [[f & others :as d-indices] double-quote-indices
-                                                               result false]
-                                                          (if (seq d-indices)
-                                                            (if (and (> i (first f)) (< i (second f)))
-                                                              true
-                                                              (recur others false))
-                                                            result)))
-                                                   (not (loop [[f & others :as d-indices] comment-quote-indices
-                                                               result false]
-                                                          (if (seq d-indices)
-                                                            (recur others (or result (and (> i (first f)) (< i (second f)))))
-                                                            result)))
+                                              (and (not (double-quote-indices-set i))
+                                                   (not (comment-quote-indices i))
                                                    (not (open-close-char-indices-set i))))
-                                            (:parens-index-vec indices-map))]
+                                            parens-index-vec)]
     r))
 
 
@@ -152,7 +148,6 @@
         [parenthesis _ _] parens
         open-brackets-indices (map (fn [[_ i]] i) (filter (fn [[e _]] (#{\(} e)) parenthesis))
         m                     (pmap (fn [[open-c close-c] brackets]
-                                      (time (println (count brackets)))
                                       (find-bracket-match-map open-c close-c brackets)) bracket-types parens)
         m                     (into {} (apply concat m))]
     {:open-bracket-indices open-brackets-indices
@@ -164,8 +159,9 @@
   [all-chars-indices match-brackets-indices-map]
   (let [xf (comp (map (fn [i]
                         (let [start-idx (inc i)
-                              fn-chars  (take-while #(not (#{\newline \space \tab \~ \# \' \@ \) \] \}} %))
-                                                    (drop start-idx all-chars-indices))]
+                              xf        (comp (drop start-idx)
+                                              (take-while #(not (#{\newline \space \tab \~ \# \' \@ \) \] \}} %))))
+                              fn-chars  (transduce xf conj all-chars-indices)]
                           (cond
                             (or (not (first fn-chars))
                                 (Character/isDigit ^Character (first fn-chars)))
@@ -179,8 +175,7 @@
 
 (defn generate-indices!
   [code]
-  (reset! indices-map (letm [
-                             all-chars-indices (vec (seq code))
+  (reset! indices-map (letm [all-chars-indices (vec (seq code))
                              char-index-vec (keep-indexed (fn [i e] [e i]) all-chars-indices)
                              char-indices (get-char-idxs all-chars-indices char-index-vec)
                              number-indices (get-number-idxs all-chars-indices char-index-vec)
