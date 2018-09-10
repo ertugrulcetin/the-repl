@@ -81,17 +81,17 @@
   [all-chars-indices char-index-vec]
   (let [colon (filter (fn [[e _]] (= \: e)) char-index-vec)]
     (filter #(not= (first %) (second %))
-            (map (fn [[_ i]]
-                   (let [start-idx     i
-                         keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
-                                                   (drop start-idx all-chars-indices))]
-                     (cond
-                       (not (first keyword-chars))
-                       [0 0]
+            (pmap (fn [[_ i]]
+                    (let [start-idx     i
+                          keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
+                                                    (drop start-idx all-chars-indices))]
+                      (cond
+                        (not (first keyword-chars))
+                        [0 0]
 
-                       :else
-                       [start-idx (+ start-idx (count keyword-chars))])))
-                 colon))))
+                        :else
+                        [start-idx (+ start-idx (count keyword-chars))])))
+                  colon))))
 
 
 ;;TODO fix performence problem!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -157,20 +157,23 @@
 
 (defn get-fn-highlighting-indices
   [all-chars-indices match-brackets-indices-map]
-  (let [xf (comp (map (fn [i]
-                        (let [start-idx (inc i)
-                              xf        (comp (drop start-idx)
-                                              (take-while #(not (#{\newline \space \tab \~ \# \' \@ \) \] \}} %))))
-                              fn-chars  (transduce xf conj all-chars-indices)]
-                          (cond
-                            (or (not (first fn-chars))
-                                (Character/isDigit ^Character (first fn-chars)))
-                            [0 0]
+  (let [size (count all-chars-indices)]
+    (filter #(not= (first %) (second %))
+            (map (fn [i]
+                   (let [start-idx (inc i)
+                         fn-chars  (loop [i start-idx r []]
+                                     (if (or (= i size)
+                                             (#{\newline \space \tab \~ \# \' \@ \) \] \}} (all-chars-indices i)))
+                                       r
+                                       (recur (inc i) (conj r (all-chars-indices i)))))]
+                     (cond
+                       (or (not (first fn-chars))
+                           (Character/isDigit ^Character (first fn-chars)))
+                       [0 0]
 
-                            :else
-                            [start-idx (+ start-idx (count fn-chars))]))))
-                 (filter (fn [x] (not= (first x) (second x)))))]
-    (transduce xf conj (:open-bracket-indices match-brackets-indices-map))))
+                       :else
+                       [start-idx (+ start-idx (count fn-chars))])))
+                 (:open-bracket-indices match-brackets-indices-map)))))
 
 
 (defn generate-indices!
@@ -191,5 +194,4 @@
                                                        :parens-index-vec            (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) char-index-vec)
                                                        :open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx))
                                                                                               (filter (fn [[_ _ len]] (= 2 len)) char-indices)))})
-                             fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)
-                             ])))
+                             fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)])))
