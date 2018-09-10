@@ -10,7 +10,6 @@
            (javax.swing.border EmptyBorder)
            (com.den.ses WrapEditorKit)))
 
-(com.den.ses.WrapEditorKit.)
 
 (defonce title (atom "The R.E.P.L."))
 
@@ -27,7 +26,7 @@
   (let [editor (styled-text* :id :editor-text-area
                              :font (font/font :name :monospaced :size 12)
                              :background "#F5EEDF")
-        _      (.setEditorKit editor (WrapEditorKit.))
+        _      (.setEditorKit editor (WrapEditorKit/getInstance))
         _      (.setMargin editor (Insets. 5 5 5 5))
         ]
     editor))
@@ -113,7 +112,7 @@
 
 (comment
   (ns-publics *ns*)
-  (meta #'seesaw.rsyntax/text-area)
+  (meta #'seesaw.rsyntax/text-area) co
   (dev/show-options (styled-text))
   (dev/show-events (styled-text*))
   (select @main-frame [:#repl-stop-button]))

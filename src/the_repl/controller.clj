@@ -8,11 +8,13 @@
             [the-repl.brackets :as brackets]
             [clojure.string :as str]
             [clojure.java.io :as io]
+            [clojure.core.async :refer [chan sliding-buffer go-loop <! timeout put!]]
             [kezban.core :refer :all])
   (:import (java.awt Color)
            (javax.swing.text StyleConstants
                              SimpleAttributeSet
-                             DefaultHighlighter$DefaultHighlightPainter)))
+                             DefaultHighlighter$DefaultHighlightPainter)
+           (javax.swing.event DocumentListener)))
 
 
 (defn- append-to-repl
@@ -109,17 +111,62 @@
                            (append-to-repl "REPL Stopped."))))
 
 
-(def ll (let [editor  (util/get-widget-by-id :editor-text-area)
-              painter (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-              sas     (SimpleAttributeSet.)
-              sd      (.getStyledDocument editor)]
+
+(defn render-highlights
+  [editor sas sd]
+  (invoke-later
+    (let [code       (value editor)
+          code-count (count code)
+          _          (brackets/generate-indices! code)]
+      (StyleConstants/setForeground sas Color/BLACK)
+      (.setCharacterAttributes sd 0 code-count sas true)
+
+
+      (StyleConstants/setForeground sas (Color/decode "#0000FF"))
+      (doseq [[_ idx] (:number-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd idx 1 sas true))
+
+      (StyleConstants/setForeground sas (Color/decode "#000080"))
+      (StyleConstants/setBold sas true)
+      (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+
+      (StyleConstants/setForeground sas (Color/decode "#007F00"))
+      (StyleConstants/setBold sas false)
+      (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd idx v sas true))
+
+      (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+      (StyleConstants/setItalic sas true)
+      (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+
+      (StyleConstants/setForeground sas (Color/decode "#808080"))
+      (StyleConstants/setItalic sas true)
+      (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+
+      (StyleConstants/setForeground sas (Color/decode "#007F00"))
+      (StyleConstants/setItalic sas false)
+      (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
+        (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))))
+
+
+(def ll (let [editor   (util/get-widget-by-id :editor-text-area)
+              painter  (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+              sas      (SimpleAttributeSet.)
+              sd       (.getStyledDocument editor)
+              document (.getDocument editor)
+              _        (.addDocumentListener document (proxy [DocumentListener] []
+                                                        (removeUpdate [e]
+                                                          (render-highlights editor sas sd))
+                                                        (insertUpdate [e]
+                                                          (render-highlights editor sas sd))
+                                                        (changedUpdate [e])))]
           (listen (util/get-widget-by-id :editor-text-area)
                   :caret-update (fn [_]
                                   (invoke-later
-                                    (let [code                (value editor)
-                                          code-count          (count code)
-                                          _                   (brackets/generate-indices! code)
-                                          caret-idx           (.getCaretPosition editor)
+                                    (let [caret-idx           (.getCaretPosition editor)
                                           hi                  (.getHighlighter editor)
                                           all-his             (.getHighlights hi)
                                           closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
@@ -131,41 +178,7 @@
                                         (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
                                       (when opening-bracket-idx
                                         (.addHighlight hi (dec caret-idx) caret-idx painter)
-                                        (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))
-
-
-                                      (StyleConstants/setForeground sas Color/BLACK)
-                                      (.setCharacterAttributes sd 0 code-count sas true)
-
-
-                                      (StyleConstants/setForeground sas (Color/decode "#0000FF"))
-                                      (doseq [[_ idx] (:number-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd idx 1 sas true))
-
-                                      (StyleConstants/setForeground sas (Color/decode "#000080"))
-                                      (StyleConstants/setBold sas true)
-                                      (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-                                      (StyleConstants/setForeground sas (Color/decode "#007F00"))
-                                      (StyleConstants/setBold sas false)
-                                      (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd idx v sas true))
-
-                                      (StyleConstants/setForeground sas (Color/decode "#660E7A"))
-                                      (StyleConstants/setItalic sas true)
-                                      (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-                                      (StyleConstants/setForeground sas (Color/decode "#808080"))
-                                      (StyleConstants/setItalic sas true)
-                                      (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-                                      (StyleConstants/setForeground sas (Color/decode "#007F00"))
-                                      (StyleConstants/setItalic sas false)
-                                      (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
-                                        (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))))
+                                        (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))))))))
 
 
 (comment

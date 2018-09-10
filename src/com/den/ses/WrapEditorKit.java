@@ -3,15 +3,25 @@ package com.den.ses;
 import javax.swing.text.*;
 
 public class WrapEditorKit extends StyledEditorKit {
+
     private ViewFactory defaultFactory = new WrapColumnFactory();
 
     public ViewFactory getViewFactory() {
         return defaultFactory;
     }
 
+    private static WrapEditorKit instance = new WrapEditorKit();
+
+    private WrapEditorKit() {
+    }
+
+    public static WrapEditorKit getInstance() {
+        return instance;
+    }
+
     public MutableAttributeSet getInputAttributes() {
         MutableAttributeSet mAttrs = super.getInputAttributes();
-        mAttrs.removeAttribute(WrapApp.LINE_BREAK_ATTRIBUTE_NAME);
+        mAttrs.removeAttribute("line_break_attribute");
         return mAttrs;
     }
 
@@ -97,5 +107,10 @@ public class WrapEditorKit extends StyledEditorKit {
             }
             return super.breakView(axis, p0, pos, len);
         }
+    }
+
+    public static void main(String[] args) {
+        WrapEditorKit w = getInstance();
+        System.out.println(w);
     }
 }
