@@ -118,38 +118,40 @@
     (let [code       (value editor)
           code-count (count code)
           _          (brackets/generate-indices! code)]
-      (StyleConstants/setForeground sas Color/BLACK)
-      (.setCharacterAttributes sd 0 code-count sas true)
+      (do
+        (StyleConstants/setForeground sas Color/BLACK)
+        (.setCharacterAttributes sd 0 code-count sas true)
 
 
-      (StyleConstants/setForeground sas (Color/decode "#0000FF"))
-      (doseq [[_ idx] (:number-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd idx 1 sas true))
+        (StyleConstants/setForeground sas (Color/decode "#0000FF"))
+        (doseq [[_ idx] (:number-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd idx 1 sas true))
 
-      (StyleConstants/setForeground sas (Color/decode "#000080"))
-      (StyleConstants/setBold sas true)
-      (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+        (StyleConstants/setForeground sas (Color/decode "#000080"))
+        (StyleConstants/setBold sas true)
+        (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-      (StyleConstants/setForeground sas (Color/decode "#007F00"))
-      (StyleConstants/setBold sas false)
-      (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd idx v sas true))
+        (StyleConstants/setForeground sas (Color/decode "#007F00"))
+        (StyleConstants/setBold sas false)
+        (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd idx v sas true))
 
-      (StyleConstants/setForeground sas (Color/decode "#660E7A"))
-      (StyleConstants/setItalic sas true)
-      (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+        (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+        (StyleConstants/setItalic sas true)
+        (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-      (StyleConstants/setForeground sas (Color/decode "#808080"))
-      (StyleConstants/setItalic sas true)
-      (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+        (StyleConstants/setForeground sas (Color/decode "#808080"))
+        (StyleConstants/setItalic sas true)
+        (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
 
-      (StyleConstants/setForeground sas (Color/decode "#007F00"))
-      (StyleConstants/setItalic sas false)
-      (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
-        (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))))
+        (StyleConstants/setForeground sas (Color/decode "#007F00"))
+        (StyleConstants/setItalic sas false)
+        (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
+          (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))
+     )))
 
 
 (def ll (let [editor   (util/get-widget-by-id :editor-text-area)

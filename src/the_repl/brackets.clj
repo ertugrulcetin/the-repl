@@ -77,24 +77,33 @@
                        char-index-vec)))
 
 
+(defn take-chars-while
+  [size start-idx chars all-chars-indices]
+  (loop [i start-idx r []]
+    (if (or (= i size)
+            (chars (all-chars-indices i)))
+      r
+      (recur (inc i) (conj r (all-chars-indices i))))))
+
+
+
 (defn get-keyword-idxs
   [all-chars-indices char-index-vec]
   (let [colon (filter (fn [[e _]] (= \: e)) char-index-vec)]
-    (filter #(not= (first %) (second %))
-            (pmap (fn [[_ i]]
-                    (let [start-idx     i
-                          keyword-chars (take-while #(not (#{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} %))
-                                                    (drop start-idx all-chars-indices))]
-                      (cond
-                        (not (first keyword-chars))
-                        [0 0]
+    (let [size (count all-chars-indices)]
+      (filter #(not= (first %) (second %))
+              (pmap (fn [[_ i]]
+                      (let [start-idx     i
+                            keyword-chars (take-chars-while size i #{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} all-chars-indices)]
+                        (cond
+                          (not (first keyword-chars))
+                          [0 0]
 
-                        :else
-                        [start-idx (+ start-idx (count keyword-chars))])))
-                  colon))))
+                          :else
+                          [start-idx (+ start-idx (count keyword-chars))])))
+                    colon)))))
 
 
-;;TODO fix performence problem!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 (defn- find-bracket-match-map
   [open-char close-char brackets]
   (let [stack     (java.util.Stack.)
@@ -161,11 +170,7 @@
     (filter #(not= (first %) (second %))
             (map (fn [i]
                    (let [start-idx (inc i)
-                         fn-chars  (loop [i start-idx r []]
-                                     (if (or (= i size)
-                                             (#{\newline \space \tab \~ \# \' \@ \) \] \}} (all-chars-indices i)))
-                                       r
-                                       (recur (inc i) (conj r (all-chars-indices i)))))]
+                         fn-chars  (take-chars-while size start-idx #{\newline \space \tab \~ \# \' \@ \) \] \}} all-chars-indices)]
                      (cond
                        (or (not (first fn-chars))
                            (Character/isDigit ^Character (first fn-chars)))
