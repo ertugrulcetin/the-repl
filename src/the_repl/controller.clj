@@ -111,16 +111,19 @@
                            (append-to-repl "REPL Stopped."))))
 
 
-
-(defn render-highlights
+(defn render-highlights!
   [editor sas sd]
   (invoke-later
-    (let [code       (value editor)
-          code-count (count code)
-          _          (brackets/generate-indices! code)]
+    (println (System/currentTimeMillis))
+    (let [code (value editor)
+          _    (brackets/generate-indices! code)]
       (do
+
+        (time
+          (println (str/index-of code "true" 99999)))
+
         (StyleConstants/setForeground sas Color/BLACK)
-        (.setCharacterAttributes sd 0 code-count sas true)
+        (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true)
 
 
         (StyleConstants/setForeground sas (Color/decode "#0000FF"))
@@ -150,8 +153,7 @@
         (StyleConstants/setForeground sas (Color/decode "#007F00"))
         (StyleConstants/setItalic sas false)
         (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))
-     )))
+          (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))
 
 
 (def ll (let [editor   (util/get-widget-by-id :editor-text-area)
@@ -161,9 +163,11 @@
               document (.getDocument editor)
               _        (.addDocumentListener document (proxy [DocumentListener] []
                                                         (removeUpdate [e]
-                                                          (render-highlights editor sas sd))
+                                                          (println "Remove")
+                                                          (render-highlights! editor sas sd))
                                                         (insertUpdate [e]
-                                                          (render-highlights editor sas sd))
+                                                          (println "Insert")
+                                                          (render-highlights! editor sas sd))
                                                         (changedUpdate [e])))]
           (listen (util/get-widget-by-id :editor-text-area)
                   :caret-update (fn [_]

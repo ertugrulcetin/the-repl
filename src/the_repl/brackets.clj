@@ -1,7 +1,6 @@
 (ns the-repl.brackets
   (:require [clojure.string :as str]
-            [kezban.core :refer :all]
-            [clojure.core.reducers :as r]))
+            [kezban.core :refer :all]))
 
 
 (defonce indices-map (atom {}))
@@ -66,7 +65,6 @@
                [e idx 2]))) idxs)))
 
 
-
 (defn get-double-quote-idx
   [all-chars-indices char-index-vec]
   (partition 2 (reduce (fn [r [e i]]
@@ -84,7 +82,6 @@
             (chars (all-chars-indices i)))
       r
       (recur (inc i) (conj r (all-chars-indices i))))))
-
 
 
 (defn get-keyword-idxs
@@ -170,7 +167,7 @@
     (filter #(not= (first %) (second %))
             (map (fn [i]
                    (let [start-idx (inc i)
-                         fn-chars  (take-chars-while size start-idx #{\newline \space \tab \~ \# \' \@ \) \] \}} all-chars-indices)]
+                         fn-chars  (take-chars-while size start-idx #{\newline \space \tab \~ \# \' \@ \( \) \[ \] \{ \}} all-chars-indices)]
                      (cond
                        (or (not (first fn-chars))
                            (Character/isDigit ^Character (first fn-chars)))
