@@ -114,13 +114,9 @@
 (defn render-highlights!
   [editor sas sd]
   (invoke-later
-    (println (System/currentTimeMillis))
     (let [code (value editor)
           _    (brackets/generate-indices! code)]
       (do
-
-        (time
-          (println (str/index-of code "true" 99999)))
 
         (StyleConstants/setForeground sas Color/BLACK)
         (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true)
@@ -134,6 +130,14 @@
         (StyleConstants/setBold sas true)
         (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
           (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
+
+        (StyleConstants/setForeground sas (Color/decode "#000080"))
+        (StyleConstants/setBold sas true)
+        (doseq [i (:true-idxs (:true-false-indices @brackets/indices-map))]
+          (.setCharacterAttributes sd i 4 sas true))
+        (doseq [i (:false-idxs (:true-false-indices @brackets/indices-map))]
+          (.setCharacterAttributes sd i 5 sas true))
+
 
         (StyleConstants/setForeground sas (Color/decode "#007F00"))
         (StyleConstants/setBold sas false)
