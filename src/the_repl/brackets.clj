@@ -8,18 +8,17 @@
 
 (defn get-comment-idxs
   [all-chars-indices char-index-vec char-indices]
-  (time
-    (let [k             (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
-         k             (partition-by (fn [[c _]] c) k)
-         [[[c _]]] k
-         k             (if (= c \newline) (rest k) k)
-         k             (partition-all 2 k)
-         size          (count all-chars-indices)
-         chars-idx-set (set (map (fn [[_ idx _]] (inc idx)) char-indices))]
-     (filter (fn [[start-i _]]
-               (not (chars-idx-set start-i)))
-             (map (fn [[[[_ start-i]] [[_ end-i]]]]
-                    [start-i (or end-i size)]) k)))))
+  (let [k             (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
+        k             (partition-by (fn [[c _]] c) k)
+        [[[c _]]] k
+        k             (if (= c \newline) (rest k) k)
+        k             (partition-all 2 k)
+        size          (count all-chars-indices)
+        chars-idx-set (set (map (fn [[_ idx _]] (inc idx)) char-indices))]
+    (filter (fn [[start-i _]]
+              (not (chars-idx-set start-i)))
+            (map (fn [[[[_ start-i]] [[_ end-i]]]]
+                   [start-i (or end-i size)]) k))))
 
 
 (defn get-number-idxs
