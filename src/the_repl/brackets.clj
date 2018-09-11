@@ -7,15 +7,19 @@
 
 
 (defn get-comment-idxs
-  [all-chars-indices char-index-vec]
-  (let [k    (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
-        k    (partition-by (fn [[c _]] c) k)
-        [[[c _]]] k
-        k    (if (= c \newline) (rest k) k)
-        k    (partition-all 2 k)
-        size (count all-chars-indices)]
-    (map (fn [[[[_ start-i]] [[_ end-i]]]]
-           [start-i (or end-i size)]) k)))
+  [all-chars-indices char-index-vec char-indices]
+  (time
+    (let [k             (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
+         k             (partition-by (fn [[c _]] c) k)
+         [[[c _]]] k
+         k             (if (= c \newline) (rest k) k)
+         k             (partition-all 2 k)
+         size          (count all-chars-indices)
+         chars-idx-set (set (map (fn [[_ idx _]] (inc idx)) char-indices))]
+     (filter (fn [[start-i _]]
+               (not (chars-idx-set start-i)))
+             (map (fn [[[[_ start-i]] [[_ end-i]]]]
+                    [start-i (or end-i size)]) k)))))
 
 
 (defn get-number-idxs
@@ -40,7 +44,7 @@
   (let [idxs (filter (fn [[e _]] (= \\ e)) char-index-vec)]
     (map (fn [[e idx]]
            (let [char-token (apply str (map (fn [i]
-                                              (nth all-chars-indices i nil))
+                                              (nth-safe all-chars-indices i))
                                             (range (inc idx) (+ idx (inc (count "backspace"))))))]
              (cond
                (str/starts-with? char-token "space")
@@ -212,7 +216,7 @@
                              number-indices (get-number-idxs all-chars-indices char-index-vec)
                              keyword-indices (get-keyword-idxs all-chars-indices char-index-vec)
                              double-quote-indices (get-double-quote-idx all-chars-indices char-index-vec)
-                             comment-quote-indices (get-comment-idxs all-chars-indices char-index-vec)
+                             comment-quote-indices (get-comment-idxs all-chars-indices char-index-vec char-indices)
                              match-brackets-indices (get-match-brackets-indices-map
                                                       {:char-indices                char-indices
                                                        :double-quote-indices        double-quote-indices
