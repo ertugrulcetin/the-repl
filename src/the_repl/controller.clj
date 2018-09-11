@@ -8,7 +8,6 @@
             [the-repl.brackets :as brackets]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [clojure.core.async :refer [chan sliding-buffer go-loop <! timeout put!]]
             [kezban.core :refer :all])
   (:import (java.awt Color)
            (javax.swing.text StyleConstants
@@ -111,67 +110,99 @@
                            (append-to-repl "REPL Stopped."))))
 
 
+(defmulti highlight-chars! #(-> % :type))
+
+
+(defmethod highlight-chars! :reset
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas Color/BLACK)
+  (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true))
+
+
+(defmethod highlight-chars! :numbers
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#0000FF"))
+  (doseq [[_ idx] (:number-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd idx 1 sas true)))
+
+
+(defmethod highlight-chars! :fns
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#000080"))
+  (StyleConstants/setBold sas true)
+  (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+
+
+(defmethod highlight-chars! :bools
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#000080"))
+  (StyleConstants/setBold sas true)
+  (doseq [i (:true-idxs (:true-false-indices @brackets/indices-map))]
+    (.setCharacterAttributes sd i 4 sas true))
+  (doseq [i (:false-idxs (:true-false-indices @brackets/indices-map))]
+    (.setCharacterAttributes sd i 5 sas true)))
+
+
+(defmethod highlight-chars! :chars
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#007F00"))
+  (StyleConstants/setBold sas false)
+  (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd idx v sas true)))
+
+
+(defmethod highlight-chars! :keywords
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+  (StyleConstants/setItalic sas true)
+  (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+
+
+(defmethod highlight-chars! :comments
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#808080"))
+  (StyleConstants/setItalic sas true)
+  (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
+
+
+(defmethod highlight-chars! :double-quote
+  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
+  (StyleConstants/setForeground sas (Color/decode "#007F00"))
+  (StyleConstants/setItalic sas false)
+  (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
+    (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))
+
+
 (defn render-highlights!
-  [editor sas sd]
+  [editor sd]
   (invoke-later
     (let [code (value editor)
-          _    (brackets/generate-indices! code)]
-      (do
-
-        (StyleConstants/setForeground sas Color/BLACK)
-        (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true)
-
-
-        (StyleConstants/setForeground sas (Color/decode "#0000FF"))
-        (doseq [[_ idx] (:number-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd idx 1 sas true))
-
-        (StyleConstants/setForeground sas (Color/decode "#000080"))
-        (StyleConstants/setBold sas true)
-        (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-        (StyleConstants/setForeground sas (Color/decode "#000080"))
-        (StyleConstants/setBold sas true)
-        (doseq [i (:true-idxs (:true-false-indices @brackets/indices-map))]
-          (.setCharacterAttributes sd i 4 sas true))
-        (doseq [i (:false-idxs (:true-false-indices @brackets/indices-map))]
-          (.setCharacterAttributes sd i 5 sas true))
-
-
-        (StyleConstants/setForeground sas (Color/decode "#007F00"))
-        (StyleConstants/setBold sas false)
-        (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd idx v sas true))
-
-        (StyleConstants/setForeground sas (Color/decode "#660E7A"))
-        (StyleConstants/setItalic sas true)
-        (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-        (StyleConstants/setForeground sas (Color/decode "#808080"))
-        (StyleConstants/setItalic sas true)
-        (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd start-i (- end-i start-i) sas true))
-
-        (StyleConstants/setForeground sas (Color/decode "#007F00"))
-        (StyleConstants/setItalic sas false)
-        (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
-          (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true))))))
+          _    (brackets/generate-indices! code)
+          m    {:sd sd}]
+      (highlight-chars! (merge m {:type :reset}))
+      (highlight-chars! (merge m {:type :numbers}))
+      (highlight-chars! (merge m {:type :fns}))
+      (highlight-chars! (merge m {:type :bools}))
+      (highlight-chars! (merge m {:type :chars}))
+      (highlight-chars! (merge m {:type :keywords}))
+      (highlight-chars! (merge m {:type :comments}))
+      (highlight-chars! (merge m {:type :double-quote})))))
 
 
 (def ll (let [editor   (util/get-widget-by-id :editor-text-area)
               painter  (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-              sas      (SimpleAttributeSet.)
               sd       (.getStyledDocument editor)
               document (.getDocument editor)
               _        (.addDocumentListener document (proxy [DocumentListener] []
                                                         (removeUpdate [e]
                                                           (println "Remove")
-                                                          (render-highlights! editor sas sd))
+                                                          (render-highlights! editor sd))
                                                         (insertUpdate [e]
                                                           (println "Insert")
-                                                          (render-highlights! editor sas sd))
+                                                          (render-highlights! editor sd))
                                                         (changedUpdate [e])))]
           (listen (util/get-widget-by-id :editor-text-area)
                   :caret-update (fn [_]

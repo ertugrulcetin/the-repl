@@ -205,22 +205,21 @@
 
 (defn generate-indices!
   [code]
-  (time
-    (reset! indices-map (letm [all-chars-indices (vec (seq code))
-                               true-false-indices (get-true-false-idxs code all-chars-indices)
-                               char-index-vec (keep-indexed (fn [i e] [e i]) all-chars-indices)
-                               char-indices (get-char-idxs all-chars-indices char-index-vec)
-                               number-indices (get-number-idxs all-chars-indices char-index-vec)
-                               keyword-indices (get-keyword-idxs all-chars-indices char-index-vec)
-                               double-quote-indices (get-double-quote-idx all-chars-indices char-index-vec)
-                               comment-quote-indices (get-comment-idxs all-chars-indices char-index-vec)
-                               match-brackets-indices (get-match-brackets-indices-map
-                                                        {:char-indices                char-indices
-                                                         :double-quote-indices        double-quote-indices
-                                                         :comment-quote-indices       comment-quote-indices
-                                                         :all-chars-indices           all-chars-indices
-                                                         :char-index-vec              char-index-vec
-                                                         :parens-index-vec            (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) char-index-vec)
-                                                         :open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx))
-                                                                                                (filter (fn [[_ _ len]] (= 2 len)) char-indices)))})
-                               fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)]))))
+  (reset! indices-map (letm [all-chars-indices (vec (seq code))
+                             true-false-indices (get-true-false-idxs code all-chars-indices)
+                             char-index-vec (keep-indexed (fn [i e] [e i]) all-chars-indices)
+                             char-indices (get-char-idxs all-chars-indices char-index-vec)
+                             number-indices (get-number-idxs all-chars-indices char-index-vec)
+                             keyword-indices (get-keyword-idxs all-chars-indices char-index-vec)
+                             double-quote-indices (get-double-quote-idx all-chars-indices char-index-vec)
+                             comment-quote-indices (get-comment-idxs all-chars-indices char-index-vec)
+                             match-brackets-indices (get-match-brackets-indices-map
+                                                      {:char-indices                char-indices
+                                                       :double-quote-indices        double-quote-indices
+                                                       :comment-quote-indices       comment-quote-indices
+                                                       :all-chars-indices           all-chars-indices
+                                                       :char-index-vec              char-index-vec
+                                                       :parens-index-vec            (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) char-index-vec)
+                                                       :open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx))
+                                                                                              (filter (fn [[_ _ len]] (= 2 len)) char-indices)))})
+                             fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)])))
