@@ -13,7 +13,8 @@
            (javax.swing.text StyleConstants
                              SimpleAttributeSet
                              DefaultHighlighter$DefaultHighlightPainter)
-           (javax.swing.event DocumentListener)))
+           (javax.swing.event DocumentListener)
+           (java.util.concurrent Executors TimeUnit)))
 
 
 (defn- append-to-repl
@@ -176,7 +177,10 @@
     (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))
 
 
-(defn render-highlights!
+(def rendered? (atom false))
+(def threshold (atom 150))
+
+(defn render!
   [editor sd]
   (invoke-later
     (let [code (value editor)
@@ -192,18 +196,38 @@
       (highlight-chars! (merge m {:type :double-quote})))))
 
 
+(defn render-highlights!
+  [editor sd]
+  (reset! rendered? false))
+
+
+(def timee (atom (System/currentTimeMillis)))
+
+
 (def ll (let [editor   (util/get-widget-by-id :editor-text-area)
               painter  (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
               sd       (.getStyledDocument editor)
               document (.getDocument editor)
               _        (.addDocumentListener document (proxy [DocumentListener] []
                                                         (removeUpdate [e]
-                                                          (println "Remove")
+                                                          (let [now (System/currentTimeMillis)]
+                                                            (println (- now @timee))
+                                                            (reset! timee now))
+                                                          ;(println "Remove")
                                                           (render-highlights! editor sd))
                                                         (insertUpdate [e]
-                                                          (println "Insert")
+                                                          (let [now (System/currentTimeMillis)]
+                                                            (println (- now @timee))
+                                                            (reset! timee now))
+                                                          ;(println "Insert")
                                                           (render-highlights! editor sd))
-                                                        (changedUpdate [e])))]
+                                                        (changedUpdate [e])))
+              _        (.scheduleAtFixedRate (Executors/newScheduledThreadPool 1)
+                                             #(do
+                                                (when (not @rendered?)
+                                                  (println "Rendered")
+                                                  (render! editor sd)
+                                                  (reset! rendered? true))) 0 @threshold TimeUnit/MILLISECONDS)]
           (listen (util/get-widget-by-id :editor-text-area)
                   :caret-update (fn [_]
                                   (invoke-later
