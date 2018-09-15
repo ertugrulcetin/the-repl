@@ -1,9 +1,7 @@
 (ns the-repl.controller
   (:require [seesaw.core :refer :all]
             [seesaw.chooser :as chooser]
-            [seesaw.dev :as dev]
             [the-repl.util :as util]
-            [the-repl.view :as view]
             [the-repl.core :as core]
             [the-repl.brackets :as brackets]
             [clojure.string :as str]
@@ -14,6 +12,16 @@
                              SimpleAttributeSet
                              DefaultHighlighter$DefaultHighlightPainter)
            (javax.swing.event DocumentListener)))
+
+
+(def color-map {:normal   Color/BLACK
+                :number   (Color/decode "#0000FF")
+                :fn       (Color/decode "#000080")
+                :bool     (Color/decode "#000080")
+                :char     (Color/decode "#007F00")
+                :keyword  (Color/decode "#660E7A")
+                :comment  (Color/decode "#808080")
+                :double-q (Color/decode "#007F00")})
 
 
 (defn- append-to-repl
@@ -114,21 +122,22 @@
 
 
 (defmethod highlight-chars! :reset
-  [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas Color/BLACK)
-  (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true))
+  [{:keys [sas sd editor] :or {sas (SimpleAttributeSet.)}}]
+  (let [caret-idx (.getCaretPosition editor)]
+    (StyleConstants/setForeground sas (:normal color-map))
+    (.setCharacterAttributes sd caret-idx (- (count (:all-chars-indices @brackets/indices-map)) caret-idx) sas true)))
 
 
 (defmethod highlight-chars! :numbers
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#0000FF"))
+  (StyleConstants/setForeground sas (:number color-map))
   (doseq [[_ idx] (:number-indices @brackets/indices-map)]
     (.setCharacterAttributes sd idx 1 sas true)))
 
 
 (defmethod highlight-chars! :fns
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#000080"))
+  (StyleConstants/setForeground sas (:fn color-map))
   (StyleConstants/setBold sas true)
   (doseq [[start-i end-i] (:fn-hi-indices @brackets/indices-map)]
     (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
@@ -136,7 +145,7 @@
 
 (defmethod highlight-chars! :bools
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#000080"))
+  (StyleConstants/setForeground sas (:bool color-map))
   (StyleConstants/setBold sas true)
   (doseq [i (:true-idxs (:true-false-indices @brackets/indices-map))]
     (.setCharacterAttributes sd i 4 sas true))
@@ -146,7 +155,7 @@
 
 (defmethod highlight-chars! :chars
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#007F00"))
+  (StyleConstants/setForeground sas (:char color-map))
   (StyleConstants/setBold sas false)
   (doseq [[_ idx v] (:char-indices @brackets/indices-map)]
     (.setCharacterAttributes sd idx v sas true)))
@@ -154,7 +163,7 @@
 
 (defmethod highlight-chars! :keywords
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#660E7A"))
+  (StyleConstants/setForeground sas (:keyword color-map))
   (StyleConstants/setItalic sas true)
   (doseq [[start-i end-i] (:keyword-indices @brackets/indices-map)]
     (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
@@ -162,7 +171,7 @@
 
 (defmethod highlight-chars! :comments
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#808080"))
+  (StyleConstants/setForeground sas (:comment color-map))
   (StyleConstants/setItalic sas true)
   (doseq [[start-i end-i] (:comment-quote-indices @brackets/indices-map)]
     (.setCharacterAttributes sd start-i (- end-i start-i) sas true)))
@@ -170,7 +179,7 @@
 
 (defmethod highlight-chars! :double-quote
   [{:keys [sas sd] :or {sas (SimpleAttributeSet.)}}]
-  (StyleConstants/setForeground sas (Color/decode "#007F00"))
+  (StyleConstants/setForeground sas (:double-q color-map))
   (StyleConstants/setItalic sas false)
   (doseq [[start-i end-i] (:double-quote-indices @brackets/indices-map)]
     (.setCharacterAttributes sd start-i (- end-i (dec start-i)) sas true)))
@@ -181,7 +190,7 @@
   (invoke-later
     (let [code (value editor)
           _    (brackets/generate-indices! code)
-          m    {:sd sd}]
+          m    {:sd sd :editor editor}]
       (highlight-chars! (merge m {:type :reset}))
       (highlight-chars! (merge m {:type :numbers}))
       (highlight-chars! (merge m {:type :fns}))
@@ -192,35 +201,35 @@
       (highlight-chars! (merge m {:type :double-quote})))))
 
 
-(def ll (let [editor   (util/get-widget-by-id :editor-text-area)
-              painter  (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
-              sd       (.getStyledDocument editor)
-              document (.getDocument editor)
-              _        (.addDocumentListener document (proxy [DocumentListener] []
-                                                        (removeUpdate [e]
-                                                          (println "Remove")
-                                                          (render-highlights! editor sd))
-                                                        (insertUpdate [e]
-                                                          (println "Insert")
-                                                          (render-highlights! editor sd))
-                                                        (changedUpdate [e])))]
-          (listen (util/get-widget-by-id :editor-text-area)
+(def ll (let [editor         (util/get-widget-by-id :editor-text-area)
+              painter        (DefaultHighlighter$DefaultHighlightPainter. (Color/decode "#b4d5fe"))
+              sd             (.getStyledDocument editor)
+              document       (.getDocument editor)
+
+              _              (.addDocumentListener document (proxy [DocumentListener] []
+                                                              (removeUpdate [e]
+                                                                (println "Remove")
+                                                                (render-highlights! editor sd))
+                                                              (insertUpdate [e]
+                                                                (println "Insert")
+                                                                (render-highlights! editor sd))
+                                                              (changedUpdate [e])))
+              pre-highlights (atom [])]
+          (listen editor
                   :caret-update (fn [_]
                                   (invoke-later
                                     (let [caret-idx           (.getCaretPosition editor)
                                           hi                  (.getHighlighter editor)
-                                          all-his             (.getHighlights hi)
                                           closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
                                           opening-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :close (dec caret-idx)])]
-                                      (doseq [h all-his]
+                                      (doseq [h @pre-highlights]
                                         (.removeHighlight hi h))
                                       (when closing-bracket-idx
-                                        (.addHighlight hi caret-idx (inc caret-idx) painter)
-                                        (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter))
+                                        (reset! pre-highlights [(.addHighlight hi caret-idx (inc caret-idx) painter)
+                                                                (.addHighlight hi closing-bracket-idx (inc closing-bracket-idx) painter)]))
                                       (when opening-bracket-idx
-                                        (.addHighlight hi (dec caret-idx) caret-idx painter)
-                                        (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter))))))))
-
+                                        (reset! pre-highlights [(.addHighlight hi (dec caret-idx) caret-idx painter)
+                                                                (.addHighlight hi opening-bracket-idx (inc opening-bracket-idx) painter)]))))))))
 
 (comment
   (ll))
