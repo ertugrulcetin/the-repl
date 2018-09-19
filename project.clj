@@ -8,6 +8,7 @@
 
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.4.474"]
+                 [org.clojure/tools.namespace "0.2.11"]
                  [org.tcrawley/dynapath "0.2.5"]
                  [nrepl "0.4.4"]
                  [seesaw "1.5.0"]

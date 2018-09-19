@@ -98,8 +98,7 @@ public class WrapEditorKit extends StyledEditorKit {
                     int index = getDocument().getText(p0, p1 - p0)
                                              .indexOf("\r");
                     if (index >= 0) {
-                        GlyphView v = (GlyphView) createFragment(p0, p0 + index + 1);
-                        return v;
+                        return createFragment(p0, p0 + index + 1);
                     }
                 } catch (BadLocationException ex) {
                     //should never happen
