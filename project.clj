@@ -13,4 +13,5 @@
                  [nrepl "0.4.4"]
                  [seesaw "1.5.0"]
                  [kezban "0.1.81"]
+                 [ns-tracker "0.3.1"]
                  [com.cemerick/pomegranate "1.0.0"]])

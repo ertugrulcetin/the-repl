@@ -206,13 +206,7 @@ public class Test {
         } catch (ClassNotFoundException | InstantiationException | UnsupportedLookAndFeelException | IllegalAccessException e) {
             e.printStackTrace();
         }
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                new Test().initUI();
-            }
-        });
+        SwingUtilities.invokeLater(() -> new Test().initUI());
     }
 
 }
