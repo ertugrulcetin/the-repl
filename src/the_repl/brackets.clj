@@ -6,6 +6,7 @@
 (defonce indices-map (atom {}))
 
 
+
 (defn get-comment-idxs
   [all-chars-indices char-index-vec char-indices]
   (let [k             (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
@@ -87,21 +88,62 @@
       (recur (inc i) (conj r (all-chars-indices i))))))
 
 
+(defn take-chars-backwards-while
+  [start-idx chars all-chars-indices]
+  (loop [i start-idx r ()]
+    (if (or (#{-1 0} i)
+            (chars (all-chars-indices i)))
+      r
+      (recur (dec i) (cons (all-chars-indices i) r)))))
+
+
+;;TODO add eliminated indices...
+(defn get-auto-complete-fns
+  [caret-idx all-chars-indices]
+  (let [code              all-chars-indices
+        chars             #{\newline \space \tab \~ \@ \( \) \[ \] \{ \}}
+        start-idx         (if (< (dec caret-idx) 0) 0 (dec caret-idx))
+        fn-str            (apply str (take-chars-backwards-while start-idx chars code))
+        start-end-idx-vec [start-idx (+ start-idx (count fn-str))]]
+    (binding [*ns* (create-ns 'the-repl-temp-ns)]
+      (refer-clojure)                                       ;;TODO load once...
+      (cond
+        (str/blank? fn-str)
+        (ns-map *ns*)
+
+        (and (= 1 (count (str/split fn-str #"/")))
+             (not (= \/ (last fn-str))))
+        (->> *ns*
+             ns-map
+             (filter (fn [[k _]] (clojure.string/starts-with? (str k) fn-str)))
+             (into {}))
+
+        (and (= 1 (count (str/split fn-str #"/")))
+             (= \/ (last fn-str)))
+        (or (try-> fn-str
+                   (str/split #"/")
+                   first
+                   symbol
+                   ns-publics)
+            {})))))
+
+
+
 (defn get-keyword-idxs
   [all-chars-indices char-index-vec]
-  (let [colon (filter (fn [[e _]] (= \: e)) char-index-vec)]
-    (let [size (count all-chars-indices)]
-      (filter #(not= (first %) (second %))
-              (pmap (fn [[_ i]]
-                      (let [start-idx     i
-                            keyword-chars (take-chars-while size i #{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} all-chars-indices)]
-                        (cond
-                          (not (first keyword-chars))
-                          [0 0]
+  (let [colon (filter (fn [[e _]] (= \: e)) char-index-vec)
+        size  (count all-chars-indices)]
+    (filter #(not= (first %) (second %))
+            (pmap (fn [[_ i]]
+                    (let [start-idx     i
+                          keyword-chars (take-chars-while size i #{\newline \space \tab \~ \@ \( \) \[ \] \{ \}} all-chars-indices)]
+                      (cond
+                        (not (first keyword-chars))
+                        [0 0]
 
-                          :else
-                          [start-idx (+ start-idx (count keyword-chars))])))
-                    colon)))))
+                        :else
+                        [start-idx (+ start-idx (count keyword-chars))])))
+                  colon))))
 
 
 (defn- find-bracket-match-map

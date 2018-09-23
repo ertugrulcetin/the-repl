@@ -123,9 +123,8 @@
 
 (defmethod highlight-chars! :reset
   [{:keys [sas sd editor] :or {sas (SimpleAttributeSet.)}}]
-  (let [caret-idx (.getCaretPosition editor)]
-    (StyleConstants/setForeground sas (:normal color-map))
-    (.setCharacterAttributes sd caret-idx (- (count (:all-chars-indices @brackets/indices-map)) caret-idx) sas true)))
+  (StyleConstants/setForeground sas (:normal color-map))
+  (.setCharacterAttributes sd 0 (count (:all-chars-indices @brackets/indices-map)) sas true))
 
 
 (defmethod highlight-chars! :numbers
@@ -219,9 +218,11 @@
                   :caret-update (fn [_]
                                   (invoke-later
                                     (let [caret-idx           (.getCaretPosition editor)
+                                          _                   (println "Caret idx: " caret-idx)
                                           hi                  (.getHighlighter editor)
                                           closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
                                           opening-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :close (dec caret-idx)])]
+                                      (println (brackets/get-auto-complete-fns caret-idx (:all-chars-indices @brackets/indices-map)))
                                       (doseq [h @pre-highlights]
                                         (.removeHighlight hi h))
                                       (when closing-bracket-idx
