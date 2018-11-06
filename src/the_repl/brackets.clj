@@ -6,7 +6,6 @@
 (defonce indices-map (atom {}))
 
 
-
 (defn get-comment-idxs
   [all-chars-indices char-index-vec char-indices]
   (let [k             (filter (fn [[e _]] (#{\; \newline} e)) char-index-vec)
@@ -168,6 +167,40 @@
     (persistent! index-map)))
 
 
+(defn get-parens-indices-ranges
+  [paren-index-vec]
+  (let [counter   (atom {:open-count 0 :close-count 0})
+        index-vec (reduce
+                    (fn [vv [c idx]]
+                      (if (= c \()
+                        (if (= (:open-count @counter) 0)
+                          (do
+                            (swap! counter update :open-count inc)
+                            (conj! vv idx))
+                          (do
+                            (swap! counter update :open-count inc)
+                            vv))
+                        (if (and (= c \)) (= (:open-count @counter) (inc (:close-count @counter))))
+                          (do
+                            (reset! counter {:open-count 0 :close-count 0})
+                            (conj! vv idx))
+                          (do
+                            (swap! counter update :close-count inc)
+                            vv))))
+                    (transient []) paren-index-vec)]
+    (partition 2 (persistent! index-vec))))
+
+
+(defn get-outer-paren-match-indices
+  [caret-idx]
+  (reduce (fn [_ [start-idx end-idx]]
+            (when (and (>= caret-idx start-idx)
+                       (<= caret-idx end-idx))
+              (reduced [start-idx end-idx])))
+          nil
+          (get-parens-indices-ranges (:plain-parens-index-vec @indices-map))))
+
+
 (defn get-indices-range-set
   [range-vec]
   (set (mapcat (fn [[s e]] (range (inc s) e)) range-vec)))
@@ -258,13 +291,15 @@
                              keyword-indices (get-keyword-idxs all-chars-indices char-index-vec)
                              double-quote-indices (get-double-quote-idx all-chars-indices char-index-vec)
                              comment-quote-indices (get-comment-idxs all-chars-indices char-index-vec char-indices)
+                             parens-index-vec (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) char-index-vec)
                              match-brackets-indices (get-match-brackets-indices-map
                                                       {:char-indices                char-indices
                                                        :double-quote-indices        double-quote-indices
                                                        :comment-quote-indices       comment-quote-indices
                                                        :all-chars-indices           all-chars-indices
                                                        :char-index-vec              char-index-vec
-                                                       :parens-index-vec            (filter (fn [[e _]] (#{\( \) \[ \] \{ \}} e)) char-index-vec)
+                                                       :parens-index-vec            parens-index-vec
                                                        :open-close-char-indices-set (set (map (fn [[_ idx _]] (inc idx))
                                                                                               (filter (fn [[_ _ len]] (= 2 len)) char-indices)))})
+                             plain-parens-index-vec (filter (fn [[e _]] (#{\( \)} e)) parens-index-vec)
                              fn-hi-indices (get-fn-highlighting-indices all-chars-indices match-brackets-indices)])))

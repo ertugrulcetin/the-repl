@@ -54,6 +54,7 @@
         (println "Ns could not loaded: " ns*)))))
 
 
+;;TODO add binding -> ns and get fn vars from here
 (defn install-deps
   [deps]
   (doseq [dep deps]

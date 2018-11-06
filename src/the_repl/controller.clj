@@ -222,6 +222,7 @@
                                           hi                  (.getHighlighter editor)
                                           closing-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :open caret-idx])
                                           opening-bracket-idx (get-in @brackets/indices-map [:match-brackets-indices :close (dec caret-idx)])]
+                                      (println "Outer range: " (brackets/get-outer-paren-match-indices caret-idx))
                                       (println (brackets/get-auto-complete-fns caret-idx (:all-chars-indices @brackets/indices-map)))
                                       (doseq [h @pre-highlights]
                                         (.removeHighlight hi h))
