@@ -167,7 +167,7 @@
     (persistent! index-map)))
 
 
-(defn get-parens-indices-ranges
+(defn- get-parens-indices-ranges
   [paren-index-vec]
   (let [counter   (atom {:open-count 0 :close-count 0})
         index-vec (reduce
@@ -191,14 +191,22 @@
     (partition 2 (persistent! index-vec))))
 
 
-(defn get-outer-paren-match-indices
-  [caret-idx]
+(defn- get-outer-paren-match-indices
+  [caret-idx indices-map]
   (reduce (fn [_ [start-idx end-idx]]
             (when (and (>= caret-idx start-idx)
                        (<= caret-idx end-idx))
               (reduced [start-idx end-idx])))
           nil
-          (get-parens-indices-ranges (:plain-parens-index-vec @indices-map))))
+          (get-parens-indices-ranges (:plain-parens-index-vec indices-map))))
+
+
+(defn get-outer-range-code
+  [caret-idx indices-map]
+  (let [[start-idx end-idx] (get-outer-paren-match-indices caret-idx indices-map)]
+    (try
+      (apply str (subvec (:all-chars-indices indices-map) start-idx end-idx))
+      (catch Exception _))))
 
 
 (defn get-indices-range-set
